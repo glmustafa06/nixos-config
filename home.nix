@@ -16,7 +16,10 @@
             		};
         	};
     	};
+
 	xdg.configFile."hypr".source = config.lib.file.mkOutOfStoreSymlink "/etc/nixos/hypr";
+
+
 
 	programs.bash = {
 		enable = true;
