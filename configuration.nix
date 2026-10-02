@@ -98,21 +98,6 @@
   	# Allow unfree packages
   	nixpkgs.config.allowUnfree = true;
 
-  	environment.systemPackages = with pkgs; [
-    		neovim
-    		wget
-    		fastfetch
-    		kitty
-    		waybar
-    		git
-    		hyprpaper
-    		firefox
-    		bat
-    		kdePackages.dolphin
-    		inputs.zen-browser.packages."${pkgs.stdenv.hostPlatform.system}".default
-		ghostty
-	];
-
  	services.upower.enable = true;
 
  	nix.settings.experimental-features = [ "nix-command" "flakes"];

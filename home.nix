@@ -1,38 +1,73 @@
-{ config, pkgs, serpantinum, ... }: {
-	imports = [ serpantinum.homeManagerModules.default ];
+{ config, pkgs, inputs, ... }:
 
-	home.username = "mustafa";
-	home.homeDirectory = "/home/mustafa";
-	home.stateVersion = "26.05";
-	
-	programs.serpantinum = {
-        	enable = true;
-        	systemd.enable = true;
-        	settings = {
-            		wallpaperDir = "/home/mustafa/Pictures/Wallpapers";
-            		general = {
-                		language = "en";
-                		weatherUnit = "metric";
-            		};
-        	};
-    	};
+{
+  	home.username = "mustafa";
+ 	home.homeDirectory = "/home/mustafa";
+  	home.stateVersion = "26.05";
 
-	xdg.configFile."hypr".source = config.lib.file.mkOutOfStoreSymlink "/etc/nixos/hypr";
+  	# Serpantinum Shell Entegrasyonu
+  	imports = [ inputs.serpantinum.homeManagerModules.default ];
 
+  	# Kullanıcı Paketleri (Tarayıcılar, Editörler, Araçlar)
+  	home.packages = with pkgs; [
+    		# Tarayıcı (Flake'den gelen Zen Browser)
+    		inputs.zen-browser.packages."${pkgs.stdenv.hostPlatform.system}".default
+    
+    		# Terminal & Geliştirme
+    		kitty
+    		ghostty
+    		neovim
+    		git
+    		wget
+    		fastfetch
+    		bat
+    		eza
+		yazi
+		tree
 
+    		# Arayüz & Görsel Araçlar
+    		waybar
+    		hyprpaper
+    		kdePackages.dolphin
+    		bibata-cursors
+  	];
 
-	programs.bash = {
-		enable = true;
-		shellAliases = {
-			btw = "echo i use nixos-hyprland btw";
-			updatenix = "sudo nixos-rebuild switch --flake /etc/nixos#legion5";
-			cdnix = "cd /etc/nixos/";	
-		};
-		#profileExtra = ''
-		#	if [ -z "$WAYLAND_DISPLAY" ] && [ "$XDG_VTNR" = 1 ]; then
-		#	exec uwsm start -S hyprland-uwsm.desktop
-		#	fi
-		#'';
+  	# İmleç Ayarları (Sistem genelinde ve pencerelerde aktifleşmesi için)
+  	home.pointerCursor = {
+    		enable = true;
+    		package = pkgs.bibata-cursors;
+    		name = "Bibata-Modern-Dark";
+    		size = 24;
+    		gtk.enable = true;
+  		x11 = {
+      			enable = true;
+      			defaultCursor = "Bibata-Modern-Dark";
+    		};
 	};
-	
+
+  	# Serpantinum Shell Konfigürasyonu
+  	programs.serpantinum = {
+    		enable = true;
+    		systemd.enable = true;
+    		settings = {
+      			wallpaperDir = "/home/mustafa/Pictures/Wallpapers";
+      			general = {
+        			language = "en";
+        			weatherUnit = "metric";
+      			};
+    		};
+  	};
+
+ 	# Hyprland Config Sembolik Bağı (Symlink)
+  	xdg.configFile."hypr".source = config.lib.file.mkOutOfStoreSymlink "/etc/nixos/hypr";
+
+  	# Bash ve Alias Tanımları
+  	programs.bash = {
+    		enable = true;
+    		shellAliases = {
+      			btw = "echo i use nixos-hyprland btw";
+      			updatenix = "sudo nixos-rebuild switch --flake /etc/nixos#legion5";
+      			cdnix = "cd /etc/nixos/";    
+    		};
+  	};
 }
