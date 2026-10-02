@@ -1,4 +1,4 @@
-{ config, pkgs, ... }:
+{ config, pkgs, inputs, ... }:
 
 {
   imports =
@@ -75,6 +75,7 @@
     firefox
     bat
     kdePackages.dolphin
+    inputs.zen-browser.packages."${pkgs.system}".default
 ];
 
  services.upower.enable = true;
