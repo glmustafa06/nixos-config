@@ -63,6 +63,6 @@ hl.bind(mainMod .. " + A", hl.dsp.exec_cmd("serpantinum msg toggle autohide"))
 for i = 1, 10 do
   local ws = tostring(i)
   local key = tostring(i % 10)
-  hl.bind(mainMod .. " + " .. key, hl.dsp.exec_cmd("serpantinum msg workspace " .. ws))
+  hl.bind(mainMod .. " + " .. key, hl.dsp.focus({ workspace = ws }))
   hl.bind(mainMod .. " + SHIFT + " .. key, hl.dsp.exec_cmd("serpantinum msg workspace " .. ws .. " move"))
 end

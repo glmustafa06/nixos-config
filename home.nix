@@ -18,15 +18,51 @@
 
     		# Terminal & Geliştirme
     		kitty
-    		ghostty
+    		curl
+		unzip
+		zip
+		ripgrep
+		fd
+		fzf
+		jq
+		ghostty
     		neovim
     		git
     		wget
     		fastfetch
     		bat
     		eza
-		yazi
 		tree
+		vscode
+		gcc
+		gnumake
+		rustc
+		python314
+
+		# Screenshot
+		grim
+		slurp
+
+		# Archive
+		p7zip
+
+		#System Info
+		btop
+		htop
+		pciutils
+		usbutils
+
+		# File Management
+		yazi
+		kdePackages.dolphin
+		nautilus
+
+		# Clipboard
+		wl-clipboard
+		cliphist
+
+		# Music
+		spotify
 
     		# Arayüz & Görsel Araçlar
     		waybar
