@@ -31,7 +31,7 @@
     		modesetting.enable = true;
     		powerManagement.enable = false;
     		
-		# Bu ayar CUDA işlemleri yokken kartı tamamen uyutur (tam istediğin şey)
+		# Bu ayar CUDA işlemleri yokken kartı uyutur
     		powerManagement.finegrained = true;
     		open = false;
     		nvidiaSettings = true;
@@ -43,9 +43,8 @@
     		offload = {
       			enable = true;
       			enableOffloadCmd = true; # nvidia-offload komutunu sisteme ekler
-    		};
+ 	   		};
   
-    		# Kendi Bus ID'lerini buraya yaz:
     		amdgpuBusId = "PCI:5:0:0"; 
     		nvidiaBusId = "PCI:1:0:0"; 
   		};
@@ -53,7 +52,10 @@
   	# Set your time zone.
   	time.timeZone = "Europe/Istanbul";
 
-  	services.getty.autologinUser = "mustafa";
+	services.displayManager.sddm.enable = true;
+	services.displayManager.sddm.wayland.enable = true;
+	environment.sessionVariables.WLR_NO_HARDWARE_CURSORS = "1";
+	environment.sessionVariables.NIXOS_OZONE_WL = "1";
 
   	programs.hyprland = {
 		enable = true;
@@ -108,6 +110,7 @@
     		bat
     		kdePackages.dolphin
     		inputs.zen-browser.packages."${pkgs.stdenv.hostPlatform.system}".default
+		ghostty
 	];
 
  	services.upower.enable = true;
