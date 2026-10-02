@@ -13,6 +13,10 @@
     		# Tarayıcı (Flake'den gelen Zen Browser)
     		inputs.zen-browser.packages."${pkgs.stdenv.hostPlatform.system}".default
    		
+		# Ses
+		pipewire
+		easyeffects
+
 		#Ofis
 		onlyoffice-desktopeditors
 
@@ -35,18 +39,11 @@
     		bibata-cursors
   	];
 
-	home.sessionVariables = {
-  		XCURSOR_THEME = "Bibata-Modern-Dark";
-  		XCURSOR_SIZE = "24";
-		HYPRCURSOR_THEME = "Bibata-Modern-Dark";
-  		HYPRCURSOR_SIZE = "24";
-	};
-
   	# İmleç Ayarları (Sistem genelinde ve pencerelerde aktifleşmesi için)
   	home.pointerCursor = {
     		enable = true;
     		package = pkgs.bibata-cursors;
-    		name = "Bibata-Modern-Dark";
+    		name = "Bibata-Modern-Classic";
     		size = 24;
     		gtk.enable = true;
   		x11.enable = true;

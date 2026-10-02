@@ -15,6 +15,12 @@
 
   	networking.hostName = "legion5"; # Define your hostname.
 
+	services.pipewire = {
+  		enable = true;
+  		pulse.enable = true; # PulseAudio uyumluluğunu açar
+  		alsa.enable = true;
+	};
+
   	# Enable networking
   	networking.networkmanager.enable = true;
   
