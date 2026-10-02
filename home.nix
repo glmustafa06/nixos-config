@@ -8,11 +8,14 @@
   	# Serpantinum Shell Entegrasyonu
   	imports = [ inputs.serpantinum.homeManagerModules.default ];
 
-  	# Kullanıcı Paketleri (Tarayıcılar, Editörler, Araçlar)
+  	# Kullanıcı Paketleri
   	home.packages = with pkgs; [
     		# Tarayıcı (Flake'den gelen Zen Browser)
     		inputs.zen-browser.packages."${pkgs.stdenv.hostPlatform.system}".default
-    
+   		
+		#Ofis
+		onlyoffice-desktopeditors
+
     		# Terminal & Geliştirme
     		kitty
     		ghostty
@@ -32,6 +35,13 @@
     		bibata-cursors
   	];
 
+	home.sessionVariables = {
+  		XCURSOR_THEME = "Bibata-Modern-Dark";
+  		XCURSOR_SIZE = "24";
+		HYPRCURSOR_THEME = "Bibata-Modern-Dark";
+  		HYPRCURSOR_SIZE = "24";
+	};
+
   	# İmleç Ayarları (Sistem genelinde ve pencerelerde aktifleşmesi için)
   	home.pointerCursor = {
     		enable = true;
@@ -39,10 +49,8 @@
     		name = "Bibata-Modern-Dark";
     		size = 24;
     		gtk.enable = true;
-  		x11 = {
-      			enable = true;
-      			defaultCursor = "Bibata-Modern-Dark";
-    		};
+  		x11.enable = true;
+		x11.defaultCursor = "Bibata-Modern-Dark";
 	};
 
   	# Serpantinum Shell Konfigürasyonu

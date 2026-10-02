@@ -56,6 +56,7 @@
 	services.displayManager.sddm.wayland.enable = true;
 	environment.sessionVariables.WLR_NO_HARDWARE_CURSORS = "1";
 	environment.sessionVariables.NIXOS_OZONE_WL = "1";
+	programs.dconf.enable = true;
 
   	programs.hyprland = {
 		enable = true;
