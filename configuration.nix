@@ -15,15 +15,23 @@
 
   	networking.hostName = "legion5"; # Define your hostname.
 
-	services.pipewire = {
-  		enable = true;
-  		pulse.enable = true; # PulseAudio uyumluluğunu açar
-  		alsa.enable = true;
-	};
-
   	# Enable networking
   	networking.networkmanager.enable = true;
   
+  	# Ses
+	services.pipewire = {
+  		enable = true;
+
+  			alsa = {
+				enable = true;
+    				support32Bit = true;
+  			};
+
+  			pulse.enable = true;
+
+  			wireplumber.enable = true;
+		};
+
  	 # Grafik Hızlandırma Desteği
   	hardware.graphics = {
     		enable = true;
@@ -102,6 +110,11 @@
 		packages = with pkgs; [];
   	};
 
+	environment.systemPackages = with pkgs; [
+  		pulseaudio
+		easyeffects
+	];
+	
   	# Allow unfree packages
   	nixpkgs.config.allowUnfree = true;
 

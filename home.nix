@@ -13,10 +13,6 @@
     		# Tarayıcı (Flake'den gelen Zen Browser)
     		inputs.zen-browser.packages."${pkgs.stdenv.hostPlatform.system}".default
    		
-		# Ses
-		pipewire
-		easyeffects
-
 		#Ofis
 		onlyoffice-desktopeditors
 
