@@ -1,87 +1,119 @@
 { config, pkgs, inputs, ... }:
 
 {
-  imports =
-    [
-      ./hardware-configuration.nix
-    ];
+  	imports =
+    		[
+      		./hardware-configuration.nix
+    		];
 
-  # Use the systemd-boot EFI boot loader.
-  boot.loader.systemd-boot.enable = true;
-  boot.loader.efi.canTouchEfiVariables = true;
+  	# Use the systemd-boot EFI boot loader.
+  	boot.loader.systemd-boot.enable = true;
+  	boot.loader.efi.canTouchEfiVariables = true;
 
-  # Use latest kernel.
-  boot.kernelPackages = pkgs.linuxPackages_latest;
+  	# Use latest kernel.
+  	boot.kernelPackages = pkgs.linuxPackages_latest;
 
-  networking.hostName = "legion5"; # Define your hostname.
+  	networking.hostName = "legion5"; # Define your hostname.
 
-  # Enable networking
-  networking.networkmanager.enable = true;
+  	# Enable networking
+  	networking.networkmanager.enable = true;
+  
+ 	 # Grafik Hızlandırma Desteği
+  	hardware.graphics = {
+    		enable = true;
+    		enable32Bit = true;
+  	};
 
-  # Set your time zone.
-  time.timeZone = "Europe/Istanbul";
+  	# NVIDIA Sürücüsünü Yükle
+  	services.xserver.videoDrivers = [ "nvidia" ];
 
-  services.getty.autologinUser = "mustafa";
+  	hardware.nvidia = {
+    		modesetting.enable = true;
+    		powerManagement.enable = false;
+    		
+		# Bu ayar CUDA işlemleri yokken kartı tamamen uyutur (tam istediğin şey)
+    		powerManagement.finegrained = true;
+    		open = false;
+    		nvidiaSettings = true;
+    		package = config.boot.kernelPackages.nvidiaPackages.production;
+  	};
 
-  programs.hyprland = {
-	enable = true;
-	xwayland.enable = true;
-	withUWSM = true;
-  };
+  	# Hybrid (Offload) Yapılandırması
+  	hardware.nvidia.prime = {
+    		offload = {
+      			enable = true;
+      			enableOffloadCmd = true; # nvidia-offload komutunu sisteme ekler
+    		};
+  
+    		# Kendi Bus ID'lerini buraya yaz:
+    		amdgpuBusId = "PCI:5:0:0"; 
+    		nvidiaBusId = "PCI:1:0:0"; 
+  		};
 
-  programs.serpantinum.enable = true;
+  	# Set your time zone.
+  	time.timeZone = "Europe/Istanbul";
 
-  # Select internationalisation properties.
-  i18n.defaultLocale = "en_US.UTF-8";
+  	services.getty.autologinUser = "mustafa";
 
-  i18n.extraLocaleSettings = {
-    LC_ADDRESS = "tr_TR.UTF-8";
-    LC_IDENTIFICATION = "tr_TR.UTF-8";
-    LC_MEASUREMENT = "tr_TR.UTF-8";
-    LC_MONETARY = "tr_TR.UTF-8";
-    LC_NAME = "tr_TR.UTF-8";
-    LC_NUMERIC = "tr_TR.UTF-8";
-    LC_PAPER = "tr_TR.UTF-8";
-    LC_TELEPHONE = "tr_TR.UTF-8";
-    LC_TIME = "tr_TR.UTF-8";
-  };
+  	programs.hyprland = {
+		enable = true;
+		xwayland.enable = true;
+		withUWSM = true;
+  	};
 
-  # Configure keymap in X11
-  services.xserver.xkb = {
-    layout = "tr";
-    variant = "";
-  };
+  	programs.serpantinum.enable = true;
 
-  console.keyMap = "trq";
+  	# Select internationalisation properties.
+  	i18n.defaultLocale = "en_US.UTF-8";
 
-  users.users."mustafa" = {
-    isNormalUser = true;
-    description = "mustafa";
-    extraGroups = [ "networkmanager" "wheel" ];
-    packages = with pkgs; [];
-  };
+  	i18n.extraLocaleSettings = {
+    		LC_ADDRESS = "tr_TR.UTF-8";
+    		LC_IDENTIFICATION = "tr_TR.UTF-8";
+    		LC_MEASUREMENT = "tr_TR.UTF-8";
+    		LC_MONETARY = "tr_TR.UTF-8";
+    		LC_NAME = "tr_TR.UTF-8";
+    		LC_NUMERIC = "tr_TR.UTF-8";
+    		LC_PAPER = "tr_TR.UTF-8";
+    		LC_TELEPHONE = "tr_TR.UTF-8";
+    		LC_TIME = "tr_TR.UTF-8";
+  	};
 
-  # Allow unfree packages
-  nixpkgs.config.allowUnfree = true;
+  	# Configure keymap in X11
+  	services.xserver.xkb = {
+    		layout = "tr";
+    		variant = "";
+  	};
 
-  environment.systemPackages = with pkgs; [
-    neovim
-    wget
-    fastfetch
-    kitty
-    waybar
-    git
-    hyprpaper
-    firefox
-    bat
-    kdePackages.dolphin
-    inputs.zen-browser.packages."${pkgs.stdenv.hostPlatform.system}".default
-];
+  	console.keyMap = "trq";
 
- services.upower.enable = true;
+  	users.users."mustafa" = {
+    		isNormalUser = true;
+    		description = "mustafa";
+    		extraGroups = [ "networkmanager" "wheel" ];	
+		packages = with pkgs; [];
+  	};
 
- nix.settings.experimental-features = [ "nix-command" "flakes"];
+  	# Allow unfree packages
+  	nixpkgs.config.allowUnfree = true;
 
- system.stateVersion = "26.05";
+  	environment.systemPackages = with pkgs; [
+    		neovim
+    		wget
+    		fastfetch
+    		kitty
+    		waybar
+    		git
+    		hyprpaper
+    		firefox
+    		bat
+    		kdePackages.dolphin
+    		inputs.zen-browser.packages."${pkgs.stdenv.hostPlatform.system}".default
+	];
+
+ 	services.upower.enable = true;
+
+ 	nix.settings.experimental-features = [ "nix-command" "flakes"];
+
+ 	system.stateVersion = "26.05";
 
 }
