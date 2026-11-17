@@ -1,110 +1,119 @@
 { config, pkgs, inputs, ... }:
 
+let
+  # Nix'in dışında, git'te duran klasörleri ~/.config'e bağlar.
+  # Dosyayı düzenlediğin an geçerli olur, rebuild gerekmez.
+  link = path: config.lib.file.mkOutOfStoreSymlink "/home/mustafa/${path}";
+in
 {
-  	home.username = "mustafa";
- 	home.homeDirectory = "/home/mustafa";
-  	home.stateVersion = "26.05";
+  home.username = "mustafa";
+  home.homeDirectory = "/home/mustafa";
+  home.stateVersion = "26.05";
 
-  	# Serpantinum Shell Entegrasyonu
-  	imports = [ inputs.serpantinum.homeManagerModules.default ];
+  home.packages = with pkgs; [
+    # --- Masaüstü: Hyprland araçları + geçici shell (Noctalia) + kendi shell'imiz için Quickshell
+    quickshell
+    noctalia
+    matugen
+    hypridle
+    hyprlock
+    hyprsunset
+    grim
+    slurp
+    wl-clipboard
+    cliphist
+    brightnessctl
+    playerctl
+    libnotify
 
-  	# Kullanıcı Paketleri
-  	home.packages = with pkgs; [
-    		# Tarayıcı (Flake'den gelen Zen Browser)
-    		inputs.zen-browser.packages."${pkgs.stdenv.hostPlatform.system}".default
-   		
-		#Ofis
-		onlyoffice-desktopeditors
+    # --- Görünüm
+    papirus-icon-theme
+    adw-gtk3
+    nwg-look
+    qt6Packages.qt6ct
+    qt6Packages.qtstyleplugin-kvantum
+    kdePackages.breeze
+    kdePackages.breeze-icons
 
-    		# Terminal & Geliştirme
-    		kitty
-    		curl
-		unzip
-		zip
-		ripgrep
-		fd
-		fzf
-		jq
-		ghostty
-    		neovim
-    		git
-    		wget
-    		fastfetch
-    		bat
-    		eza
-		tree
-		vscode
-		gcc
-		gnumake
-		rustc
-		python314
+    # --- Uygulamalar
+    inputs.zen-browser.packages.${pkgs.stdenv.hostPlatform.system}.default
+    kitty
+    kdePackages.dolphin
+    kdePackages.kio-extras
+    vscode
+    obsidian
+    spotify
+    onlyoffice-desktopeditors
+    pavucontrol
+    networkmanagerapplet # nm-connection-editor
 
-		# Screenshot
-		grim
-		slurp
+    # --- Terminal araçları
+    neovim
+    btop
+    fastfetch
+    ripgrep
+    fd
+    fzf
+    jq
+    eza
+    bat
+    yazi
+    ncdu
+    unzip
+    zip
+    p7zip
+    uv
+    python3
+    # gcc, rustc gibi derleyiciler sisteme değil, projeye özel `nix develop` ortamlarına
+  ];
 
-		# Archive
-		p7zip
+  # Hyprland ayarı: ~/nixos-config/hypr → ~/.config/hypr
+  xdg.configFile."hypr".source = link "nixos-config/hypr";
+  
+  # Hyprland yalnızca AMD'yi kullansın, Nvidia uyuyabilsin.
+  # HDMI'dan harici ekran takarsan sonuna :/dev/dri/nvidia-dgpu ekle
+  # (HDMI büyük ihtimalle Nvidia'ya bağlı).
+  xdg.configFile."uwsm/env-hyprland".text = ''
+    export AQ_DRM_DEVICES=/dev/dri/amd-igpu
+    export __EGL_VENDOR_LIBRARY_FILENAMES=/run/opengl-driver/share/glvnd/egl_vendor.d/50_mesa.json
+  '';
 
-		#System Info
-		btop
-		htop
-		pciutils
-		usbutils
+  # Aşama 1'de açılacak: kendi shell'imiz
+  # xdg.configFile."quickshell/yorunge".source = link "projects/yorunge";
 
-		# File Management
-		yazi
-		kdePackages.dolphin
-		nautilus
+  # İmleç
+  home.pointerCursor = {
+    enable = true;
+    package = pkgs.bibata-cursors;
+    name = "Bibata-Modern-Classic";
+    size = 24;
+    gtk.enable = true;
+    x11.enable = true;
+  };
 
-		# Clipboard
-		wl-clipboard
-		cliphist
+  # Koyu tema tercihi (GTK uygulamaları)
+  dconf.settings."org/gnome/desktop/interface".color-scheme = "prefer-dark";
 
-		# Music
-		spotify
+  # Arka plan servisleri
+  services.easyeffects.enable = true; # açılışta gizli başlar
+  services.hyprpolkitagent.enable = true; # yönetici izni pencereleri
 
-    		# Arayüz & Görsel Araçlar
-    		waybar
-    		hyprpaper
-    		kdePackages.dolphin
-    		bibata-cursors
-  	];
+  # fish
+  programs.fish = {
+    enable = true;
+    interactiveShellInit = ''
+      set -g fish_greeting
+    '';
+    shellAliases = {
+      updatenix = "sudo nixos-rebuild switch --flake ~/nixos-config#legion5"; # ayarı uygula
+      flakeupdate = "nix flake update --flake ~/nixos-config"; # paket sürümlerini güncelle
+      nixsize = "nixos-rebuild dry-build --flake ~/nixos-config#legion5"; # ne kadar inecek?
+      nixclean = "sudo nix-collect-garbage --delete-older-than 7d"; # eski sürümleri sil
+      cdnix = "cd ~/nixos-config";
+      prime-run = "env __EGL_VENDOR_LIBRARY_FILENAMES=/run/opengl-driver/share/glvnd/egl_vendor.d/10_nvidia.json:/run/opengl-driver/share/glvnd/egl_vendor.d/50_mesa.json nvidia-offload";
+    };
+  };
 
-  	# İmleç Ayarları (Sistem genelinde ve pencerelerde aktifleşmesi için)
-  	home.pointerCursor = {
-    		enable = true;
-    		package = pkgs.bibata-cursors;
-    		name = "Bibata-Modern-Classic";
-    		size = 24;
-    		gtk.enable = true;
-  		x11.enable = true;
-		x11.defaultCursor = "Bibata-Modern-Dark";
-	};
-
-  	# Serpantinum Shell Konfigürasyonu
-  	programs.serpantinum = {
-    		enable = true;
-    		systemd.enable = true;
-    		settings = {
-      			wallpaperDir = "/home/mustafa/Pictures/Wallpapers";
-      			general = {
-        			language = "en";
-        			weatherUnit = "metric";
-      			};
-    		};
-  	};
-
- 	# Hyprland Config Sembolik Bağı (Symlink)
-  	xdg.configFile."hypr".source = config.lib.file.mkOutOfStoreSymlink "/etc/nixos/hypr";
-
-  	# Bash ve Alias Tanımları
-  	programs.bash = {
-    		enable = true;
-    		shellAliases = {
-      			btw = "echo i use nixos-hyprland btw";
-      			updatenix = "sudo nixos-rebuild switch --flake /etc/nixos#legion5";
-      			cdnix = "cd /etc/nixos/";    
-    		};
-  	};
+  # kitty.conf, Noctalia, qt6ct ve EasyEffects ayarları bilerek Nix'e verilmedi:
+  # arayüzden ya da Noctalia tarafından değiştiriliyorlar (plan: Sorun 40).
 }

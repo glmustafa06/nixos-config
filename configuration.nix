@@ -1,127 +1,219 @@
-{ config, pkgs, inputs, ... }:
+{ config, pkgs, ... }:
 
 {
-  	imports =
-    		[
-      		./hardware-configuration.nix
-    		];
+  imports = [ ./hardware-configuration.nix ];
 
-  	# Use the systemd-boot EFI boot loader.
-  	boot.loader.systemd-boot.enable = true;
-  	boot.loader.efi.canTouchEfiVariables = true;
+  # ---------------------------------------------------------------
+  # Önyükleme
+  # ---------------------------------------------------------------
+  boot.loader.systemd-boot.enable = true;
+  boot.loader.systemd-boot.configurationLimit = 5; # menüde en fazla 5 sürüm
+  boot.loader.efi.canTouchEfiVariables = true;
 
-  	# Use latest kernel.
-  	boot.kernelPackages = pkgs.linuxPackages_latest;
+  # Varsayılan çekirdek. linuxPackages_latest ile Nvidia modülü zaman zaman
+  # derlenemiyor; bu hafta sorun istemiyoruz.
+  boot.kernelPackages = pkgs.linuxPackages;
 
-  	networking.hostName = "legion5"; # Define your hostname.
+  # btrfs: zstd sıkıştırma + erişim zamanı yazmama.
+  # hardware-configuration.nix'teki "subvol=..." seçenekleriyle birleşir.
+  fileSystems = {
+    "/".options = [ "compress=zstd" "noatime" ];
+    "/home".options = [ "compress=zstd" "noatime" ];
+    "/nix".options = [ "compress=zstd" "noatime" ];
+  };
 
-  	# Enable networking
-  	networking.networkmanager.enable = true;
-  
-  	# Ses
-	services.pipewire = {
-  		enable = true;
+  # sda3: 384 GB'lık veri bölümü (btrfs) → ~/Veri
+  # Büyük dosyalar burada durur, 40 GB'lık kök bölüm rahatlar.
+  # Disk bulunamazsa açılış beklemez (nofail).
+  fileSystems."/home/mustafa/Veri" = {
+    device = "/dev/disk/by-uuid/89645538-1bb7-43e8-9f8e-257e0e3beedd";
+    fsType = "btrfs";
+    options = [ "noatime" "compress=zstd" "nofail" "x-systemd.device-timeout=5s" ];
+  };
 
-  			alsa = {
-				enable = true;
-    				support32Bit = true;
-  			};
+  zramSwap.enable = true;
 
-  			pulse.enable = true;
+  # ---------------------------------------------------------------
+  # Saat, dil, klavye
+  # ---------------------------------------------------------------
+  time.timeZone = "Europe/Istanbul";
+  # Windows aynı bilgisayarda: iki sistem arasında geçince saat 3 saat kaymasın.
+  time.hardwareClockInLocalTime = true;
 
-  			wireplumber.enable = true;
-		};
+  i18n.defaultLocale = "en_US.UTF-8";
+  i18n.extraLocaleSettings = {
+    LC_TIME = "tr_TR.UTF-8";
+    LC_MONETARY = "tr_TR.UTF-8";
+    LC_MEASUREMENT = "tr_TR.UTF-8";
+    LC_PAPER = "tr_TR.UTF-8";
+    LC_ADDRESS = "tr_TR.UTF-8";
+    LC_TELEPHONE = "tr_TR.UTF-8";
+    LC_NAME = "tr_TR.UTF-8";
+    LC_IDENTIFICATION = "tr_TR.UTF-8";
+    # LC_NUMERIC ve LC_CTYPE bilerek İngilizce kalıyor: ondalık ayırıcı nokta olsun
+    # ve Türkçe "I" sorunu betikleri bozmasın (plan: Sorun 19 ve 20).
+  };
 
- 	 # Grafik Hızlandırma Desteği
-  	hardware.graphics = {
-    		enable = true;
-    		enable32Bit = true;
-  	};
+  services.xserver.xkb.layout = "tr";
+  console.keyMap = "trq";
 
-  	# NVIDIA Sürücüsünü Yükle
-  	services.xserver.videoDrivers = [ "nvidia" ];
+  # ---------------------------------------------------------------
+  # Ağ, Bluetooth, güç
+  # ---------------------------------------------------------------
+  networking.hostName = "legion5";
+  networking.networkmanager.enable = true;
 
-  	hardware.nvidia = {
-    		modesetting.enable = true;
-    		powerManagement.enable = false;
-    		
-		# Bu ayar CUDA işlemleri yokken kartı uyutur
-    		powerManagement.finegrained = true;
-    		open = false;
-    		nvidiaSettings = true;
-    		package = config.boot.kernelPackages.nvidiaPackages.production;
-  	};
+  hardware.bluetooth = {
+    enable = true;
+    powerOnBoot = true;
+  };
 
-  	# Hybrid (Offload) Yapılandırması
-  	hardware.nvidia.prime = {
-    		offload = {
-      			enable = true;
-      			enableOffloadCmd = true; # nvidia-offload komutunu sisteme ekler
- 	   		};
-  
-    		amdgpuBusId = "PCI:5:0:0"; 
-    		nvidiaBusId = "PCI:1:0:0"; 
-  		};
+  services.upower.enable = true;
+  services.power-profiles-daemon.enable = true; # Güç modu: Dengeli / Performans / Tasarruf
+  services.udisks2.enable = true; # Dolphin'den USB bellek bağlamak için
 
-  	# Set your time zone.
-  	time.timeZone = "Europe/Istanbul";
+  # ---------------------------------------------------------------
+  # Ses
+  # ---------------------------------------------------------------
+  security.rtkit.enable = true;
+  services.pipewire = {
+    enable = true;
+    alsa.enable = true;
+    alsa.support32Bit = true;
+    pulse.enable = true;
+    wireplumber.enable = true;
+  };
 
-	services.displayManager.sddm.enable = true;
-	services.displayManager.sddm.wayland.enable = true;
-	environment.sessionVariables.WLR_NO_HARDWARE_CURSORS = "1";
-	environment.sessionVariables.NIXOS_OZONE_WL = "1";
-	programs.dconf.enable = true;
+  # ---------------------------------------------------------------
+  # Grafik: AMD (ekran) + Nvidia RTX 2060 (gerektiğinde)
+  # ---------------------------------------------------------------
+  hardware.graphics = {
+    enable = true;
+    enable32Bit = true;
+  };
 
-  	programs.hyprland = {
-		enable = true;
-		xwayland.enable = true;
-		withUWSM = true;
-  	};
+  services.xserver.videoDrivers = [ "nvidia" ];
 
-  	programs.serpantinum.enable = true;
+  hardware.nvidia = {
+    modesetting.enable = true;
+    powerManagement.enable = false; # Uykudan uyanmada sorun çıkarsa ilk denenecek: true
 
-  	# Select internationalisation properties.
-  	i18n.defaultLocale = "en_US.UTF-8";
+    # Legion 5 (Ryzen 4000) ince ayarlı modu desteklemiyor; kaba mod kullanılıyor
+    powerManagement.finegrained = false;
+    moduleParams.nvidia.NVreg_DynamicPowerManagement = "0x01";
+    open = false;
+    nvidiaSettings = true;
+    package = config.boot.kernelPackages.nvidiaPackages.production;
 
-  	i18n.extraLocaleSettings = {
-    		LC_ADDRESS = "tr_TR.UTF-8";
-    		LC_IDENTIFICATION = "tr_TR.UTF-8";
-    		LC_MEASUREMENT = "tr_TR.UTF-8";
-    		LC_MONETARY = "tr_TR.UTF-8";
-    		LC_NAME = "tr_TR.UTF-8";
-    		LC_NUMERIC = "tr_TR.UTF-8";
-    		LC_PAPER = "tr_TR.UTF-8";
-    		LC_TELEPHONE = "tr_TR.UTF-8";
-    		LC_TIME = "tr_TR.UTF-8";
-  	};
+    prime = {
+      offload = {
+        enable = true;
+        enableOffloadCmd = true; # "nvidia-offload <program>" komutu
+      };
+      amdgpuBusId = "PCI:5:0:0";
+      nvidiaBusId = "PCI:1:0:0";
+    };
+  };
 
-  	# Configure keymap in X11
-  	services.xserver.xkb = {
-    		layout = "tr";
-    		variant = "";
-  	};
+  # Ekran kartlarına sabit adlar (card0/card1 açılışta yer değiştirebiliyor)
+  services.udev.extraRules = ''
+    KERNEL=="card*", KERNELS=="0000:05:00.0", SUBSYSTEM=="drm", SUBSYSTEMS=="pci", SYMLINK+="dri/amd-igpu"
+    KERNEL=="card*", KERNELS=="0000:01:00.0", SUBSYSTEM=="drm", SUBSYSTEMS=="pci", SYMLINK+="dri/nvidia-dgpu"
 
-  	console.keyMap = "trq";
+    # Nvidia sürücüye bağlanınca güç yönetimine izin ver (kaba mod için gerekli)
+    ACTION=="bind", SUBSYSTEM=="pci", ATTR{vendor}=="0x10de", ATTR{class}=="0x030000", TEST=="power/control", ATTR{power/control}="auto"
+    ACTION=="unbind", SUBSYSTEM=="pci", ATTR{vendor}=="0x10de", ATTR{class}=="0x030000", TEST=="power/control", ATTR{power/control}="on"
+  '';
 
-  	users.users."mustafa" = {
-    		isNormalUser = true;
-    		description = "mustafa";
-    		extraGroups = [ "networkmanager" "wheel" ];	
-		packages = with pkgs; [];
-  	};
+  # ---------------------------------------------------------------
+  # Masaüstü: SDDM + Hyprland (UWSM ile)
+  # ---------------------------------------------------------------
+  services.displayManager.sddm = {
+    enable = true;
+    wayland.enable = true;
+  };
 
-	environment.systemPackages = with pkgs; [
-  		pulseaudio
-		easyeffects
-	];
-	
-  	# Allow unfree packages
-  	nixpkgs.config.allowUnfree = true;
+  programs.hyprland = {
+    enable = true;
+    xwayland.enable = true;
+    withUWSM = true;
+  };
 
- 	services.upower.enable = true;
+  # Dosya seçme pencereleri (Zen, Electron uygulamaları) için
+  xdg.portal.extraPortals = [ pkgs.xdg-desktop-portal-gtk ];
 
- 	nix.settings.experimental-features = [ "nix-command" "flakes"];
+  environment.sessionVariables = {
+    NIXOS_OZONE_WL = "1"; # Electron uygulamaları Wayland'de açılsın
+    QT_QPA_PLATFORMTHEME = "qt6ct"; # Dolphin'in koyu temada siyah yazı sorunu (CachyOS'taki çözüm)
+  };
 
- 	system.stateVersion = "26.05";
+  programs.dconf.enable = true;
 
+  # Nix dışından gelen hazır programlar (uv ile kurulan Python paketleri,
+  # VS Code eklentileri) için
+  programs.nix-ld.enable = true;
+
+  # Oyunlar Windows'ta. Steam gerekirse aç; 40 GB'a dikkat (plan: Sorun 43).
+  # programs.steam.enable = true;
+
+  # ---------------------------------------------------------------
+  # Yazı tipleri
+  # ---------------------------------------------------------------
+  fonts.packages = with pkgs; [
+    inter
+    jetbrains-mono
+    nerd-fonts.jetbrains-mono
+    noto-fonts
+    noto-fonts-color-emoji
+  ];
+
+  fonts.fontconfig.defaultFonts = {
+    sansSerif = [ "Inter" "Noto Sans" ];
+    monospace = [ "JetBrains Mono" ];
+    emoji = [ "Noto Color Emoji" ];
+  };
+
+  # ---------------------------------------------------------------
+  # Kullanıcı
+  # ---------------------------------------------------------------
+  programs.fish.enable = true;
+
+  users.users.mustafa = {
+    isNormalUser = true;
+    description = "Mustafa";
+    shell = pkgs.fish;
+    extraGroups = [ "wheel" "networkmanager" "video" "input" ];
+  };
+
+  environment.systemPackages = with pkgs; [
+    git
+    curl
+    wget
+    pciutils
+    usbutils
+    btrfs-progs
+  ];
+
+  # ---------------------------------------------------------------
+  # Nix ve disk (40 GB kuralları — plan: Bölüm 2)
+  # ---------------------------------------------------------------
+  nixpkgs.config.allowUnfree = true;
+
+  nix.settings = {
+    experimental-features = [ "nix-command" "flakes" ];
+    auto-optimise-store = true; # aynı dosyaları tek kopyada tutar
+    # Boş yer 3 GB'ın altına inerse, derleme sırasında 8 GB boşalana kadar temizlik yap
+    min-free = 3 * 1024 * 1024 * 1024;
+    max-free = 8 * 1024 * 1024 * 1024;
+  };
+
+  nix.gc = {
+    automatic = true;
+    dates = "weekly";
+    options = "--delete-older-than 7d";
+  };
+
+  services.journald.settings.Journal.SystemMaxUse = "200M";
+
+  system.stateVersion = "26.05";
 }

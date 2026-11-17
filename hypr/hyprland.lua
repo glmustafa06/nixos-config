@@ -1,6 +1,11 @@
-require("config/variables")
+-- Yörünge — Hyprland 0.57 ayarı
+-- Mango ayarlarından taşındı. Her dosya tek bir konuyu yönetir.
+
 require("config/env")
-require("config/autostart")
 require("config/monitors")
-require("config/settings")
+require("config/input")
+require("config/appearance")
+require("config/layouts")
+require("config/rules")
 require("config/keybinds")
+require("config/autostart")
