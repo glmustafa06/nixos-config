@@ -24,11 +24,23 @@ local function set_layout(layout)
     if not ws then
         return
     end
+    -- Numaralı alan "1" diye seçilir; "name:1" adı "1" olan *adlandırılmış*
+    -- alanı arar ve numaralı alana hiç uymaz (Super+N'nin çalışmama nedeni buydu)
+    local selector
     if ws.special then
-        hl.workspace_rule({ workspace = tostring(ws.name), layout = layout })
+        selector = tostring(ws.name)
+    elseif ws.id and ws.id > 0 then
+        selector = tostring(ws.id)
     else
-        hl.workspace_rule({ workspace = "name:" .. tostring(ws.name), layout = layout })
+        selector = "name:" .. tostring(ws.name)
     end
+
+    -- Aynı alan için verilen kural öncekinin yerine geçiyor; 1–5'in kalıcılığı kaybolmasın
+    local keep = ws.id ~= nil and ws.id >= 1 and ws.id <= 5
+    hl.workspace_rule({ workspace = selector, layout = layout, persistent = keep or nil })
+
+    -- Bardaki ada, düzen adını yenilesin diye haber ver
+    hl.dispatch(hl.dsp.event("desk-layout"))
 end
 
 -- Super+N: dwindle → scrolling → monocle → dwindle
