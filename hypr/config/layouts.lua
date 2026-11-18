@@ -46,7 +46,7 @@ end
 -- Super+N: dwindle → scrolling → monocle → dwindle
 local LAYOUT_CYCLE = { "dwindle", "scrolling", "monocle" }
 
-hl.bind("SUPER + N", function()
+local function cycle_layout()
     local ws = hl.get_active_special_workspace() or hl.get_active_workspace()
     if not ws then
         return
@@ -59,7 +59,17 @@ hl.bind("SUPER + N", function()
         end
     end
     set_layout(next_layout)
-end)
+end
+
+hl.bind("SUPER + N", cycle_layout)
+
+-- desk'in Düzen menüsü bu ikisini çağırır:
+--   hyprctl dispatch 'function() desk.set_layout("scrolling") end'
+-- Böylece menü ile kısayollar aynı yoldan geçer.
+desk = {
+    set_layout = set_layout,
+    cycle_layout = cycle_layout,
+}
 
 -- Super+Alt+D / S / M: doğrudan düzen seç (Mango: setlayout)
 hl.bind("SUPER + ALT + D", function() set_layout("dwindle") end)
@@ -71,5 +81,13 @@ hl.bind("SUPER + R", function()
     local ws = hl.get_active_workspace()
     if ws and ws.tiled_layout == "scrolling" then
         hl.dispatch(hl.dsp.layout("colresize +conf"))
+    end
+end)
+
+-- Super+C: scrolling'de odaktaki sütunu ekranın ortasına getir (Pencere menüsündeki "Sütunu ortala")
+hl.bind("SUPER + C", function()
+    local ws = hl.get_active_workspace()
+    if ws and ws.tiled_layout == "scrolling" then
+        hl.dispatch(hl.dsp.layout("center"))
     end
 end)

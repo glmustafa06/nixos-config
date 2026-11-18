@@ -49,6 +49,22 @@ hl.layer_rule({
     ignore_alpha = 0.3,
 })
 
+-- desk: menüler ve kontrol merkezi hafifçe büyüyerek açılır, solarak kapanır.
+-- Hızlar appearance.lua → layersIn / layersOut. Ses göstergesi (desk-osd) yalnızca solar.
+hl.layer_rule({
+    name = "desk-popin",
+    match = { namespace = "^desk-(menu|control-center)$" },
+    animation = "popin 92%",
+})
+
+-- Bar ve Noctalia'nın katmanları animasyonsuz: Noctalia kendi animasyonunu yapıyor,
+-- bar da shell her yeniden yüklendiğinde titremesin.
+hl.layer_rule({
+    name = "no-anim-panels",
+    match = { namespace = "^(noctalia.*|desk-bar)$" },
+    no_anim = true,
+})
+
 -- Ekran görüntüsü seçim alanı animasyonsuz (Mango'daki kural)
 hl.layer_rule({
     name = "selection-no-anim",

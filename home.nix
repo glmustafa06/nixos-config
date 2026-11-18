@@ -15,6 +15,7 @@ in
     quickshell
     noctalia
     matugen
+    imagemagick
     hypridle
     hyprlock
     hyprsunset
@@ -63,6 +64,7 @@ in
     zip
     p7zip
     uv
+    tree
     python3
     # gcc, rustc gibi derleyiciler sisteme değil, projeye özel `nix develop` ortamlarına
   ];

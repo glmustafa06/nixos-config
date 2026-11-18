@@ -30,10 +30,14 @@ hl.config({
         -- Buzlu cam. Pil için makul değerler (plan: Sorun 29)
         blur = {
             enabled = true,
-            size = 6,
+            size = 5,
             passes = 2,
             new_optimizations = true,
             vibrancy = 0.17,
+            -- Camın arkasını biraz karartır: arkada beyaz bir sayfa olsa da yazılar okunur.
+            -- desk/theme/Colors.qml'deki cam saydamlığıyla birlikte hesaplandı;
+            -- değiştirirsen desk'te `python3 scripts/contrast.py` çalıştır.
+            brightness = 0.8,
             popups = true,
         },
     },
@@ -61,5 +65,11 @@ hl.animation({ leaf = "windowsOut", enabled = true, speed = 1.5, bezier = "linea
 hl.animation({ leaf = "border",     enabled = true, speed = 2,   bezier = "smooth" })
 hl.animation({ leaf = "fade",       enabled = true, speed = 1.5, bezier = "smooth" })
 hl.animation({ leaf = "workspaces", enabled = true, speed = 1.8, bezier = "smooth", style = "slide" })        -- alan değişimi 180 ms
--- Paneller kendi animasyonlarını yapıyor (Mango'da da kapalıydı)
-hl.animation({ leaf = "layers",     enabled = false, speed = 1,  bezier = "default" })
+-- Katmanlar (menüler, paneller): kısa bir solma; desk'in menüleri ve kontrol merkezi ayrıca
+-- hafifçe büyüyerek açılır (rules.lua → desk-popin). Noctalia kendi animasyonunu yaptığı için
+-- ona ve bara animasyon yok (rules.lua → no-anim-panels).
+hl.animation({ leaf = "layers",        enabled = true, speed = 1.3, bezier = "smooth", style = "fade" })
+hl.animation({ leaf = "layersIn",      enabled = true, speed = 1.3, bezier = "smooth", style = "fade" })  -- açılma 130 ms
+hl.animation({ leaf = "layersOut",     enabled = true, speed = 1,   bezier = "linear", style = "fade" })  -- kapanma 100 ms
+hl.animation({ leaf = "fadeLayersIn",  enabled = true, speed = 1.3, bezier = "smooth" })
+hl.animation({ leaf = "fadeLayersOut", enabled = true, speed = 1,   bezier = "linear" })
