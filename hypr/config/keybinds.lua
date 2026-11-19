@@ -5,8 +5,8 @@
 local SUPER = "SUPER"
 local LID_SCRIPT = "~/.config/hypr/scripts/lid.sh" -- exec_cmd kabukta çalıştığı için ~ açılır
 -- desk'e IPC ile ulaşmak için (shell.qml'deki IpcHandler'lar)
-local DESK = "qs ipc -p ~/projects/desk call "
-local SCREENSHOT = "~/projects/desk/scripts/screenshot.sh"
+local DESK = "qs ipc -p ~/nixos-config/desk call "
+local SCREENSHOT = "~/nixos-config/desk/scripts/screenshot.sh"
 
 -- Uygulamalar
 hl.bind(SUPER .. " + RETURN", hl.dsp.exec_cmd("kitty"))
@@ -29,12 +29,20 @@ hl.bind("SHIFT + Print", hl.dsp.exec_cmd(SCREENSHOT .. " full"))
 -- Ses, parlaklık, medya tuşları.
 -- Önce değer değişir, sonra desk'in göstergesi açılır. desk kapalı olsa da tuşlar çalışır.
 -- (Ses değişikliğini desk kendisi de görüyor; IPC en üst/alt sınırda da gösterge çıksın diye.)
-hl.bind("XF86AudioRaiseVolume", hl.dsp.exec_cmd("wpctl set-volume -l 1 @DEFAULT_AUDIO_SINK@ 5%+; " .. DESK .. "osd volume"), { locked = true, repeating = true })
-hl.bind("XF86AudioLowerVolume", hl.dsp.exec_cmd("wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-; " .. DESK .. "osd volume"), { locked = true, repeating = true })
-hl.bind("XF86AudioMute", hl.dsp.exec_cmd("wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle; " .. DESK .. "osd volume"), { locked = true })
+hl.bind("XF86AudioRaiseVolume",
+    hl.dsp.exec_cmd("wpctl set-volume -l 1 @DEFAULT_AUDIO_SINK@ 5%+; " .. DESK .. "osd volume"),
+    { locked = true, repeating = true })
+hl.bind("XF86AudioLowerVolume", hl.dsp.exec_cmd("wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-; " .. DESK .. "osd volume"),
+    { locked = true, repeating = true })
+hl.bind("XF86AudioMute", hl.dsp.exec_cmd("wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle; " .. DESK .. "osd volume"),
+    { locked = true })
 hl.bind("XF86AudioMicMute", hl.dsp.exec_cmd("wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle"), { locked = true })
-hl.bind("XF86MonBrightnessUp", hl.dsp.exec_cmd("brightnessctl -d amdgpu_bl1 -e4 -n2 set 5%+; " .. DESK .. "osd brightness"), { locked = true, repeating = true })
-hl.bind("XF86MonBrightnessDown", hl.dsp.exec_cmd("brightnessctl -d amdgpu_bl1 -e4 -n2 set 5%-; " .. DESK .. "osd brightness"), { locked = true, repeating = true })
+hl.bind("XF86MonBrightnessUp",
+    hl.dsp.exec_cmd("brightnessctl -d amdgpu_bl1 -e4 -n2 set 5%+; " .. DESK .. "osd brightness"),
+    { locked = true, repeating = true })
+hl.bind("XF86MonBrightnessDown",
+    hl.dsp.exec_cmd("brightnessctl -d amdgpu_bl1 -e4 -n2 set 5%-; " .. DESK .. "osd brightness"),
+    { locked = true, repeating = true })
 hl.bind("XF86AudioPlay", hl.dsp.exec_cmd("playerctl play-pause"), { locked = true })
 hl.bind("XF86AudioPause", hl.dsp.exec_cmd("playerctl play-pause"), { locked = true })
 hl.bind("XF86AudioNext", hl.dsp.exec_cmd("playerctl next"), { locked = true })
@@ -49,10 +57,10 @@ hl.bind("ALT + TAB", hl.dsp.window.cycle_next())
 
 -- Odak (oklar ve hjkl), yer değiştirme (Shift), boyut (Ctrl)
 local DIRECTIONS = {
-    { "left", "H", "left", -50, 0 },
-    { "right", "L", "right", 50, 0 },
-    { "up", "K", "up", 0, -50 },
-    { "down", "J", "down", 0, 50 },
+    { "left",  "H", "left",  -50, 0 },
+    { "right", "L", "right", 50,  0 },
+    { "up",    "K", "up",    0,   -50 },
+    { "down",  "J", "down",  0,   50 },
 }
 
 for _, d in ipairs(DIRECTIONS) do
@@ -60,7 +68,8 @@ for _, d in ipairs(DIRECTIONS) do
     for _, key in ipairs({ arrow, letter }) do
         hl.bind(SUPER .. " + " .. key, hl.dsp.focus({ direction = dir }))
         hl.bind(SUPER .. " + SHIFT + " .. key, hl.dsp.window.swap({ direction = dir }))
-        hl.bind(SUPER .. " + CTRL + " .. key, hl.dsp.window.resize({ x = dx, y = dy, relative = true }), { repeating = true })
+        hl.bind(SUPER .. " + CTRL + " .. key, hl.dsp.window.resize({ x = dx, y = dy, relative = true }),
+            { repeating = true })
     end
 end
 

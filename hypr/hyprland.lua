@@ -1,5 +1,4 @@
 -- Hyprland 0.57 ayarı
--- Mango ayarlarından taşındı. Her dosya tek bir konuyu yönetir.
 
 require("config/env")
 require("config/monitors")
