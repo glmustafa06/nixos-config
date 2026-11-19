@@ -206,11 +206,18 @@
 
   nix.settings = {
     experimental-features = [ "nix-command" "flakes" ];
-    auto-optimise-store = true; # aynı dosyaları tek kopyada tutar
+    # Nix indirme hızı ayarları
+    http-connections = 50;
+    max-substitution-jobs = 32;
+    download-buffer-size = 512 * 1024 * 1024;
+
     # Boş yer 3 GB'ın altına inerse, derleme sırasında 8 GB boşalana kadar temizlik yap
     min-free = 3 * 1024 * 1024 * 1024;
     max-free = 8 * 1024 * 1024 * 1024;
   };
+
+  # Aynı dosyaları birleştirme günde bir kez, arka planda
+  nix.optimise.automatic = true;
 
   nix.gc = {
     automatic = true;
