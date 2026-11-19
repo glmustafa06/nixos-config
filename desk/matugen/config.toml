@@ -1,0 +1,9 @@
+# Matugen: duvar kâğıdından renk üretimi. scripts/colors.sh çağırır.
+# Göreli yollar bu dosyanın bulunduğu klasöre göre çözülür.
+
+[config]
+
+[templates.desk]
+input_path = "./colors.json"
+# Ara dosya: colors.sh buna barın görünümünü ekleyip colors.json'a yazar
+output_path = "~/.local/state/desk/matugen.json"

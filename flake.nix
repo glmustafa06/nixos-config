@@ -21,6 +21,7 @@
       specialArgs = { inherit inputs; };
       modules = [
         ./configuration.nix
+        ./desk/nix/nixos.nix # desk'in sistem tarafı (configuration.nix → desk.enable)
         home-manager.nixosModules.home-manager
         {
           home-manager = {

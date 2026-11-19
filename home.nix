@@ -9,6 +9,9 @@ in
   home.username = "mustafa";
   home.homeDirectory = "/home/mustafa";
   home.stateVersion = "26.05";
+  
+  imports = [ ./desk/nix/home.nix ];
+  desk.enable = true;
 
   home.packages = with pkgs; [
     # --- Masaüstü: Hyprland araçları + geçici shell (Noctalia) + kendi shell'imiz için Quickshell
