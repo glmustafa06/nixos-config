@@ -73,6 +73,7 @@ in
     uv
     tree
     python3
+    gh
     # gcc, rustc gibi derleyiciler sisteme değil, projeye özel `nix develop` ortamlarına
   ];
 

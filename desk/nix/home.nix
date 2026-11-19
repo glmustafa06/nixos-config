@@ -110,7 +110,7 @@ in
     home.activation.desk = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
       desk=${lib.escapeShellArg cfg.source}
       if [ -d "$desk/scripts" ]; then
-        export PATH=${lib.makeBinPath (with pkgs; [ python3 procps coreutils gnugrep ])}:$PATH
+        export PATH=${lib.makeBinPath (with pkgs; [ python3 procps coreutils gnugrep imagemagick ])}:$PATH
         kitty=${lib.escapeShellArg "${config.xdg.configHome}/kitty/kitty.conf"}
         if ! grep -qx 'include desk-colors.conf' "$kitty" 2>/dev/null; then
           run mkdir -p "$(dirname "$kitty")"
@@ -118,6 +118,8 @@ in
         fi
         run python3 "$desk/scripts/apps_theme.py" || echo "desk: apps_theme.py çalışmadı" >&2
         run python3 "$desk/scripts/dolphin_setup.py" || true
+        # Giriş ekranı: duvar kâğıdı ve kişi resmi /var/lib/desk'e (ImageMagick gerekir)
+        run python3 "$desk/scripts/login_screen.py" || true
       else
         echo "desk: $desk bulunamadı; ilk kurulum atlandı (desk.source)" >&2
       fi

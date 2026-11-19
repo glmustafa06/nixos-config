@@ -1,8 +1,10 @@
 import QtQuick
+import QtQuick.Effects
 import Quickshell
 import Quickshell.Wayland
 import Quickshell.Hyprland
 import qs.theme
+import qs.components
 import qs.services
 
 // Dock: ekranın altında ortada, menülerle aynı buzlu camdan.
@@ -213,6 +215,16 @@ PanelWindow {
             height: Math.max(0, root.height - y)
         }
 
+        // Altında yumuşak gölge: dock'u duvar kâğıdından hafifçe ayırır (abartısız)
+        RectangularShadow {
+            anchors.fill: panel
+            radius: panel.radius
+            blur: 26
+            spread: -4
+            offset.y: 5
+            color: Colors.dockShadow
+        }
+
         Rectangle {
             id: panel
 
@@ -224,6 +236,8 @@ PanelWindow {
             color: Colors.glass
             border.width: 1
             border.color: Colors.panelBorder
+
+            GlassEdge {}
 
             Behavior on y {
                 NumberAnimation {

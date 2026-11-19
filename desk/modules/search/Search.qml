@@ -186,6 +186,8 @@ PanelWindow {
         border.width: 1
         border.color: Colors.panelBorder
 
+        GlassEdge {}
+
         ColumnLayout {
             id: column
 

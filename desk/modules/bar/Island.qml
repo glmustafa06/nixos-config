@@ -268,9 +268,9 @@ Item {
                     }
                 }
 
-                // Düzen simgesi ve adı
+                // Düzen simgesi; adı üstüne gelince yanında açılır
                 Row {
-                    spacing: 6
+                    spacing: layoutHover.hovered ? 6 : 0
 
                     LayoutIcon {
                         anchors.verticalCenter: parent.verticalCenter
@@ -279,13 +279,36 @@ Item {
                         color: Colors.islandText
                     }
 
-                    Text {
+                    Item {
                         anchors.verticalCenter: parent.verticalCenter
-                        text: WindowManager.layout
-                        color: Colors.islandText
-                        font.family: Typography.family
-                        font.pixelSize: Typography.small
-                        font.weight: Font.Medium
+                        width: layoutHover.hovered ? layoutName.implicitWidth : 0
+                        height: layoutName.implicitHeight
+                        clip: true
+
+                        Behavior on width {
+                            NumberAnimation {
+                                duration: Metrics.durationFast
+                                easing.type: Easing.OutCubic
+                            }
+                        }
+
+                        Text {
+                            id: layoutName
+                            text: WindowManager.layout
+                            opacity: layoutHover.hovered ? 1 : 0
+                            color: Colors.islandText
+                            font.family: Typography.family
+                            font.pixelSize: Typography.small
+                            font.weight: Font.Medium
+
+                            Behavior on opacity {
+                                NumberAnimation { duration: Metrics.durationFast }
+                            }
+                        }
+                    }
+
+                    HoverHandler {
+                        id: layoutHover
                     }
                 }
             }

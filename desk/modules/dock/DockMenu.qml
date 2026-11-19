@@ -3,6 +3,7 @@ import QtQuick.Layouts
 import Quickshell
 import Quickshell.Hyprland
 import qs.theme
+import qs.components
 import qs.services
 import qs.modules.menu
 
@@ -197,6 +198,8 @@ Rectangle {
     color: Colors.menu
     border.width: 1
     border.color: Colors.panelBorder
+
+    GlassEdge {}
 
     // Açılırken içerik hafifçe yukarı kayarak belirir (cam hemen gelir)
     onVisibleChanged: {

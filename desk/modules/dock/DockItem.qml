@@ -18,6 +18,8 @@ Item {
 
     readonly property var windows: separator || place ? [] : DockApps.windowsOf(key)
     readonly property bool running: windows.length > 0
+    // Odaktaki pencere bu uygulamanın mı (noktası vurgu renginde, uzun)
+    readonly property bool focused: running && windows.includes(WindowManager.window)
 
     // Ad etiketinde görünen ad
     readonly property string title: {
@@ -134,7 +136,7 @@ Item {
         }
     }
 
-    // Açık uygulamanın noktası (simgenin altında)
+    // Açık uygulamanın noktası (simgenin altında). Odaktaki uygulamanınki vurgu renginde kısa bir hap.
     Rectangle {
         visible: root.running
         anchors {
@@ -142,10 +144,20 @@ Item {
             top: parent.bottom
             topMargin: 2
         }
-        width: 4
+        width: root.focused ? 12 : 4
         height: 4
         radius: 2
-        color: Colors.dockIndicator
+        color: root.focused ? Colors.dockIndicatorFocused : Colors.dockIndicator
+
+        Behavior on width {
+            NumberAnimation {
+                duration: Metrics.durationDot
+                easing.type: Easing.OutCubic
+            }
+        }
+        Behavior on color {
+            ColorAnimation { duration: Metrics.durationDot }
+        }
     }
 
     MouseArea {

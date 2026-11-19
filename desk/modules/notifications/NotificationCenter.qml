@@ -95,6 +95,8 @@ PanelWindow {
         border.width: 1
         border.color: Colors.panelBorder
 
+        GlassEdge {}
+
         FocusScope {
             anchors.fill: parent
             focus: true

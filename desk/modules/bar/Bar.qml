@@ -243,7 +243,8 @@ PanelWindow {
             }
         }
 
-        // --- Sağ: tepsi, durum simgeleri ve saat
+        // --- Sağ: macOS'taki sırayla, gruplar arasında biraz daha boşluk:
+        //   tepsi | klavye dili | Bluetooth, ses, pil, Wi-Fi | arama, (mikrofon), kontrol merkezi | saat
         RowLayout {
             anchors {
                 right: parent.right
@@ -254,7 +255,46 @@ PanelWindow {
 
             Tray {
                 bar: root
-                Layout.rightMargin: implicitWidth > 0 ? 6 : 0 // simge yoksa boşluk da olmasın
+                Layout.rightMargin: implicitWidth > 0 ? Metrics.barGroupGap : 0 // simge yoksa boşluk da olmasın
+            }
+
+            // Klavye dili
+            BarItem {
+                Layout.rightMargin: Metrics.barGroupGap
+
+                BarText {
+                    text: KeyboardLayout.code
+                    font.pixelSize: Typography.small
+                    font.weight: Font.DemiBold
+                    font.letterSpacing: 0.4
+                }
+            }
+
+            // Bluetooth: bağlıyken simgesi değişir; tıklayınca cihaz listesi
+            BarItem {
+                active: root.openMenu === controlCenter.menuKey && controlCenter.rootPage === "bluetooth"
+                onClicked: root.toggleControlCenter("bluetooth")
+
+                Icon {
+                    name: BluetoothStatus.icon
+                    size: Metrics.barIconSize
+                    strokeWidth: Metrics.barIconStroke
+                    color: BluetoothStatus.enabled ? Colors.barText : Colors.barTextMuted
+                }
+            }
+
+            // Ses: tekerlekle düzey değişir; tıklayınca ayrıntılı ses menüsü
+            BarItem {
+                active: root.openMenu === controlCenter.menuKey && controlCenter.rootPage === "sound"
+                onClicked: root.toggleControlCenter("sound")
+                onScrolled: steps => AudioStatus.changeVolume(steps * 0.05)
+
+                Icon {
+                    name: AudioStatus.icon
+                    size: Metrics.barIconSize
+                    strokeWidth: Metrics.barIconStroke
+                    color: Colors.barText
+                }
             }
 
             // Pil: yüzde ve simge
@@ -278,51 +318,23 @@ PanelWindow {
 
             // Wi-Fi (kablo bağlıysa ağ simgesi); tıklayınca Wi-Fi listesi
             BarItem {
+                Layout.rightMargin: Metrics.barGroupGap
                 active: root.openMenu === controlCenter.menuKey && controlCenter.rootPage === "wifi"
                 onClicked: root.toggleControlCenter("wifi")
 
                 WifiIcon {
                     visible: NetworkStatus.kind === "wifi"
                     strength: NetworkStatus.strength
+                    size: Metrics.barIconSize
+                    strokeWidth: Metrics.barIconStroke
                     color: Colors.barText
                 }
                 Icon {
                     visible: NetworkStatus.kind !== "wifi"
                     name: NetworkStatus.kind
+                    size: Metrics.barIconSize
+                    strokeWidth: Metrics.barIconStroke
                     color: NetworkStatus.kind === "wifi-off" ? Colors.barTextMuted : Colors.barText
-                }
-            }
-
-            // Bluetooth: bir cihaz bağlıysa vurgu renginde; tıklayınca cihaz listesi
-            BarItem {
-                active: root.openMenu === controlCenter.menuKey && controlCenter.rootPage === "bluetooth"
-                onClicked: root.toggleControlCenter("bluetooth")
-
-                Icon {
-                    name: BluetoothStatus.icon
-                    color: BluetoothStatus.connected ? Colors.barAccent : BluetoothStatus.enabled ? Colors.barText : Colors.barTextMuted
-                }
-            }
-
-            // Ses: tekerlekle düzey değişir; tıklayınca ayrıntılı ses menüsü
-            BarItem {
-                active: root.openMenu === controlCenter.menuKey && controlCenter.rootPage === "sound"
-                onClicked: root.toggleControlCenter("sound")
-                onScrolled: steps => AudioStatus.changeVolume(steps * 0.05)
-
-                Icon {
-                    name: AudioStatus.icon
-                    color: Colors.barText
-                }
-            }
-
-            // Klavye dili
-            BarItem {
-                BarText {
-                    text: KeyboardLayout.code
-                    font.pixelSize: Typography.small
-                    font.weight: Font.DemiBold
-                    font.letterSpacing: 0.4
                 }
             }
 
@@ -332,28 +344,25 @@ PanelWindow {
 
                 Icon {
                     name: "search"
-                    size: 15
-                    strokeWidth: 2.4
+                    size: Metrics.barIconSize - 1
+                    strokeWidth: Metrics.barIconStroke + 0.2
                     color: Colors.barText
                 }
             }
 
-            // Mikrofon kullanılıyorsa turuncu nokta (macOS'taki gibi)
-            Rectangle {
-                visible: AudioStatus.micInUse
-                Layout.leftMargin: 4
-                Layout.rightMargin: 2
-                implicitWidth: 7
-                implicitHeight: 7
-                radius: 3.5
-                color: Colors.barWarning
-            }
-
-            // Kontrol merkezi
+            // Kontrol merkezi; mikrofon kullanılıyorsa yanında turuncu nokta (macOS'taki gibi)
             BarItem {
+                Layout.rightMargin: Metrics.barGroupGap
                 active: root.openMenu === controlCenter.menuKey && controlCenter.rootPage === "main"
                 onClicked: root.toggleControlCenter("main")
 
+                Rectangle {
+                    visible: AudioStatus.micInUse
+                    implicitWidth: 6
+                    implicitHeight: 6
+                    radius: 3
+                    color: Colors.barWarning
+                }
                 ControlCenterIcon {
                     color: Colors.barText
                 }
@@ -368,8 +377,8 @@ PanelWindow {
                 Icon {
                     visible: QuickSettings.doNotDisturb
                     name: "moon"
-                    size: 14
-                    strokeWidth: 2.4
+                    size: Metrics.barIconSize - 2
+                    strokeWidth: Metrics.barIconStroke + 0.2
                     color: Colors.barText
                 }
                 BarText {

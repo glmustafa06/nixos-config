@@ -28,6 +28,7 @@ Singleton {
 
     readonly property color panel: glass
     readonly property color panelBorder: Qt.rgba(1, 1, 1, 0.11)
+    readonly property color glassEdge: Qt.rgba(1, 1, 1, 0.20)        // camın üst kenarındaki ince ışık (GlassEdge)
     readonly property color tile: Qt.rgba(1, 1, 1, 0.08)
     readonly property color tileBorder: Qt.rgba(1, 1, 1, 0.05)      // kutuların iç kenarı
     readonly property color tileHover: Qt.rgba(1, 1, 1, 0.12)       // tıklanabilir kutunun üstüne gelince
@@ -60,7 +61,9 @@ Singleton {
 
     // --- Dock (zemini de glass)
     readonly property color dockHover: Qt.rgba(1, 1, 1, 0.10)        // simgenin üstüne gelince arkası
-    readonly property color dockIndicator: "#e9e6e0"                  // açık uygulamanın noktası
+    readonly property color dockIndicator: Qt.rgba(233 / 255, 230 / 255, 224 / 255, 0.62) // açık uygulamanın noktası
+    readonly property color dockIndicatorFocused: accent                // odaktaki uygulamanınki
+    readonly property color dockShadow: Qt.rgba(0, 0, 0, 0.32)         // dock'un altındaki yumuşak gölge
     readonly property color dockSeparator: Qt.rgba(1, 1, 1, 0.14)
     // Ad etiketi: küçük olduğu için bulanıklık yerine neredeyse örtücü
     readonly property color tooltip: Qt.rgba(30 / 255, 32 / 255, 36 / 255, 0.94)

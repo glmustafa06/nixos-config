@@ -2,6 +2,7 @@
 # Duvar kâğıdından kabuğun renklerini üretir ve ~/.local/state/desk/colors.json'a yazar:
 #   - vurgu rengi (matugen)
 #   - barın görünümü: açık duvar kâğıdında koyu yazı (scripts/bar_tone.py)
+# Sonra uygulamaların renkleri (apps_theme.py) ve giriş ekranının duvar kâğıdı (login_screen.py).
 # Shell bu dosyayı izlediği için renkler anında değişir.
 #   Kullanım: scripts/colors.sh <resim>
 set -euo pipefail
@@ -31,3 +32,6 @@ echo "Colors written: $state/colors.json"
 
 # Aynı renkler kitty'ye ve Dolphin'e (Kvantum); bir sorun olsa da kabuğun renkleri yazıldı
 python3 "$root/scripts/apps_theme.py" || echo "apps_theme.py failed" >&2
+
+# Giriş ekranının (SDDM) bulanık duvar kâğıdı: /var/lib/desk/login.jpg
+python3 "$root/scripts/login_screen.py" "$image" || echo "login_screen.py failed" >&2

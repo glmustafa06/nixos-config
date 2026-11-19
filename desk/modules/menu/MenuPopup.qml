@@ -3,6 +3,7 @@ import QtQuick.Layouts
 import Quickshell
 import Quickshell.Wayland
 import qs.theme
+import qs.components
 
 // Açılır menü: buzlu cam panel, satırlar ve alt menüler.
 // Bar menüleri, sistem tepsisi ve dock bunu kullanır.
@@ -254,6 +255,8 @@ PanelWindow {
         color: Colors.menu
         border.width: 1
         border.color: Colors.panelBorder
+
+        GlassEdge {}
 
         // Tuşları yakalar (pencere klavye odağını aldığında)
         Item {

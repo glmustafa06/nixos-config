@@ -95,6 +95,8 @@ PanelWindow {
         border.width: 1
         border.color: Colors.panelBorder
 
+        GlassEdge {}
+
         Keys.onEscapePressed: root.open = false
 
         ColumnLayout {

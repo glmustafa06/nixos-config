@@ -11,7 +11,7 @@ desk `~/nixos-config/desk`'te durur ve Nix modülleriyle kurulur (`nix/`):
   servisleri, ilk kurulum (kitty.conf'a `include`, `scripts/apps_theme.py`, `scripts/dolphin_setup.py`; her
   updatenix'te eksik olanı tamamlar).
 - `nix/nixos.nix` (`flake.nix` → modules, `configuration.nix`'te `desk.enable = true`): kilit ekranının şifre
-  denetimi (PAM), pil (upower), güç modu, yazı tipleri (Inter, JetBrains Mono).
+  denetimi (PAM), giriş ekranı teması ve `/var/lib/desk`, pil (upower), güç modu, yazı tipleri (Inter, JetBrains Mono).
 
 desk grafik oturumla başlayan bir servis; çökerse 2 sn sonra kendini açar. Kod Nix deposuna kopyalanmaz:
 bir `.qml` dosyasını kaydettiğin an desk kendini yeniler.
@@ -52,6 +52,17 @@ Pencerelerde kenarlık yok; odaktaki pencere, ötekiler hafifçe karardığı i�
 Yüzeyler sabit (Grafit). Duvar kâğıdı Super+W ile seçilince betik kendiliğinden çalışır; elle çalıştırmak
 yalnızca başka yoldan değiştirince gerekir.
 
+## Bar
+
+- Solda logo, uygulamanın adı ve menüleri; ortada ada (çalışma alanı noktaları, düzen simgesi — adı üstüne gelince
+  açılır —, çalarken kapak ve dalga); sağda macOS'taki sırayla, gruplar arasında biraz boşlukla:
+  tepsi · klavye dili · Bluetooth, ses, pil, Wi-Fi · arama, kontrol merkezi · tarih ve saat.
+- Bardaki simgeler tek renk ve aynı kalınlıkta (`Metrics.barIconSize`, `barIconStroke`). Tepsi simgeleri gri tonlu;
+  üstüne gelince ya da menüsü açıkken kendi renkleri. Mikrofon kullanılıyorsa kontrol merkezi simgesinin yanında
+  turuncu nokta.
+- Cam yüzeylerin (menüler, kontrol merkezi, bildirim merkezi, arama, dock) üst kenarında ince bir ışık var
+  (`components/GlassEdge.qml`); yazıların altına girmez.
+
 ## Dock
 
 - Sabitlenenler `~/.local/state/desk/dock.json` dosyasında; dock'ta sağ tık → **Dock'ta tut** ile değişir.
@@ -59,6 +70,7 @@ yalnızca başka yoldan değiştirince gerekir.
   Orta tık her zaman yeni pencere açar. Sağ tıkta pencere listesi, uygulamanın eylemleri ve kapatma var.
 - Bu alandaki bir pencere dock'un yerine girince gizlenir; fare ekranın alt kenarına gelince çıkar.
 - Sağ tık menüsü ve ad etiketi dock'un kendi penceresinde çizilir (ayrı pencerede menüye tıklanamıyordu, plan: Sorun 62).
+- Açık uygulamaların altında nokta; odaktaki uygulamanınki vurgu renginde kısa bir hap. Altında yumuşak bir gölge.
 - Uygulama simgeleri Colloid temasından (`shell.qml` → `//@ pragma IconTheme Colloid-Dark`;
   NixOS'ta `home.nix` → `colloid-icon-theme`).
 
@@ -108,6 +120,17 @@ desk düzenlenirken ya da çökerken etkilenmez, kilitliyken dosya değişikliğ
 - Boşta (hypridle + `hypr/scripts/idle.sh`): pilde 3 dk karartır, 5 dk kilitler ve ekranı kapatır, 15 dk uyutur;
   prizde 10 dk karartır, 15 dk kilitler ve ekranı kapatır. Video oynarken hiçbiri olmaz.
 - Kilit çökerse Hyprland düz renkli bir ekran gösterir; kurtarma: plan → Sorun 26.
+
+## Giriş ekranı (SDDM)
+
+Kilit ekranıyla aynı: bulanık duvar kâğıdı, tarih ve saat, kişi ve şifre kutusu, sağ altta uyku/yeniden
+başlat/kapat, sol altta oturum seçici (varsayılan Hyprland (UWSM)), sağ üstte klavye düzeni.
+
+- Tema `sddm/` (Qt 6, kendi başına; desk'in parçalarını kullanamaz). `nix/nixos.nix` kurar
+  (`desk.loginScreen`, varsayılan açık); temanın kendisinde değişiklik updatenix ister.
+- SDDM ev klasörünü okuyamaz: duvar kâğıdının bulanık, karartılmış hâli ve kişi resmi (`~/.face`)
+  `/var/lib/desk`'e konur (`scripts/login_screen.py`; duvar kâğıdı değişince colors.sh, ayrıca her updatenix).
+- Çıkış yapmadan denemek: `sddm-greeter-qt6 --test-mode --theme /run/current-system/sw/share/sddm/themes/desk`
 
 ## Duvar kâğıdı
 
@@ -243,6 +266,7 @@ Barda `Colors.text` değil `Colors.barText`, `barTextMuted`, `barAccent` kullan�
 | `matugen/` | renk üretim ayarı ve şablonu |
 | `theme/kvantum/` | Dolphin'in Kvantum teması için şablonlar (apps_theme.py doldurur) |
 | `nix/` | Home Manager ve NixOS modülleri (programlar, servisler, ilk kurulum, PAM) |
+| `sddm/` | giriş ekranı teması (SDDM, kilit ekranıyla aynı görünüm) |
 | `scripts/` | yardımcı betikler |
 
 Kod İngilizce, açıklamalar Türkçe.

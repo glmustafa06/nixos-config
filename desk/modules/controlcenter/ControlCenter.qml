@@ -2,6 +2,7 @@ import QtQuick
 import Quickshell
 import Quickshell.Wayland
 import qs.theme
+import qs.components
 import qs.services
 
 // Kontrol merkezi: barın altında, sağda açılan buzlu cam panel.
@@ -122,6 +123,8 @@ PanelWindow {
         color: Colors.panel
         border.width: 1
         border.color: Colors.panelBorder
+
+        GlassEdge {}
 
         FocusScope {
             anchors.fill: parent

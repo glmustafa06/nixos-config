@@ -8,6 +8,8 @@ import qs.modules.menu
 
 // Sistem tepsisi: Steam, Discord gibi uygulamaların simgeleri.
 // Sol tık uygulamayı açar (yalnızca menüsü olanlarda menüyü), sağ tık menüyü açar.
+// Simgeler gri tonlu (bardaki öteki tek renk simgelerle uyumlu, macOS gibi); üstüne gelince ya da
+// menüsü açıkken kendi renkleri.
 RowLayout {
     id: root
 
@@ -50,14 +52,21 @@ RowLayout {
             onScrolled: steps => modelData.scroll(steps * 120, false)
 
             IconImage {
+                id: trayIcon
+
+                readonly property bool colored: item.hovered || item.active
+
                 source: item.modelData.icon
                 implicitSize: 16
 
-                // Açık barda beyaz (tek renkli) simgeler kaybolmasın: çevresine ince koyu gölge.
-                // Renkli simgelerde pek fark edilmez.
-                layer.enabled: Colors.lightBar
+                layer.enabled: true
                 layer.effect: MultiEffect {
-                    shadowEnabled: true
+                    saturation: trayIcon.colored ? 0 : -1
+                    Behavior on saturation {
+                        NumberAnimation { duration: Metrics.durationFast }
+                    }
+                    // Açık barda beyaz (tek renkli) simgeler kaybolmasın: çevresine ince koyu gölge
+                    shadowEnabled: Colors.lightBar
                     shadowColor: Colors.trayHalo
                     shadowBlur: 1
                     blurMax: 6

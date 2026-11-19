@@ -12,6 +12,9 @@ Singleton {
     readonly property int barItemHeight: 24
     readonly property int barItemPadding: 9  // öğelerin iç yatay boşluğu
     readonly property int barItemSpacing: 1
+    readonly property int barGroupGap: 6     // sağdaki simge grupları arasındaki ek boşluk
+    readonly property int barIconSize: 16
+    readonly property real barIconStroke: 2.1  // 24 birimlik ölçekte; bardaki bütün çizgi simgeler aynı kalınlıkta
 
     // Bar penceresi bardan uzun: ada açılınca bu alana taşar.
     // Saydam kısım tıklamaları engellemez (Bar.qml'deki mask).
