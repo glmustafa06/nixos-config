@@ -1,4 +1,3 @@
--- Kısayollar: Mango'dakilerin karşılığı.
 -- Aynı tuşu iki kez bağlama; 0.57 reddeder (plan: Sorun 3).
 -- Super+N, Super+R, Super+C ve Super+Alt+D/S/M layouts.lua'da.
 
@@ -19,6 +18,7 @@ hl.bind(SUPER .. " + S", hl.dsp.exec_cmd(DESK .. "controlcenter toggle"))
 hl.bind(SUPER .. " + V", hl.dsp.exec_cmd(DESK .. "search clipboard"))
 hl.bind(SUPER .. " + W", hl.dsp.exec_cmd(DESK .. "wallpaper toggle"))
 hl.bind(SUPER .. " + SHIFT + ESCAPE", hl.dsp.exec_cmd(DESK .. "controlcenter open session"))
+
 -- Kilit: hypridle desk'in kilit ekranını açar (hypridle.conf → lock_cmd)
 hl.bind(SUPER .. " + ESCAPE", hl.dsp.exec_cmd("loginctl lock-session"), { locked = true })
 

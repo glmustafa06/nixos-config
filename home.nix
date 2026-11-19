@@ -42,12 +42,15 @@ in
     kitty
     kdePackages.dolphin
     kdePackages.kio-extras
+    kdePackages.kdegraphics-thumbnailers # Dolphin'de PDF ve RAW önizlemeleri
+    kdePackages.ffmpegthumbs # video önizlemeleri
+    kdePackages.kimageformats # AVIF, HEIC, JXL, PSD… resimleri ve önizlemeleri
+    kdePackages.qtimageformats # WebP, TIFF
     vscode
     obsidian
     spotify
     onlyoffice-desktopeditors
     pavucontrol
-    networkmanagerapplet # nm-connection-editor
 
     # --- Terminal araçları
     neovim

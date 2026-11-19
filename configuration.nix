@@ -12,7 +12,7 @@
 
   # Varsayılan çekirdek. linuxPackages_latest ile Nvidia modülü zaman zaman
   # derlenemiyor; bu hafta sorun istemiyoruz.
-  boot.kernelPackages = pkgs.linuxPackages;
+  boot.kernelPackages = pkgs.linuxPackages_latest;
 
   # btrfs: zstd sıkıştırma + erişim zamanı yazmama.
   # hardware-configuration.nix'teki "subvol=..." seçenekleriyle birleşir.
