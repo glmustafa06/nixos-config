@@ -76,6 +76,9 @@
   # Ses
   # ---------------------------------------------------------------
   security.rtkit.enable = true;
+  security.pam.services.desk-lock = { };
+  security.pam.services.hyprlock = { };
+  
   services.pipewire = {
     enable = true;
     alsa.enable = true;

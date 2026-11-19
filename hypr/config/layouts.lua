@@ -66,10 +66,9 @@ hl.bind("SUPER + N", cycle_layout)
 -- desk'in Düzen menüsü bu ikisini çağırır:
 --   hyprctl dispatch 'function() desk.set_layout("scrolling") end'
 -- Böylece menü ile kısayollar aynı yoldan geçer.
-desk = {
-    set_layout = set_layout,
-    cycle_layout = cycle_layout,
-}
+desk = desk or {}
+desk.set_layout = set_layout
+desk.cycle_layout = cycle_layout
 
 -- Super+Alt+D / S / M: doğrudan düzen seç (Mango: setlayout)
 hl.bind("SUPER + ALT + D", function() set_layout("dwindle") end)

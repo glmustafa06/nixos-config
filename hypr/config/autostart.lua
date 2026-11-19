@@ -2,13 +2,13 @@
 -- EasyEffects ve polkit penceresi Home Manager servisleriyle başlıyor (home.nix).
 
 hl.on("hyprland.start", function()
-    -- Kendi shell'imiz: üst bar ve ada.
+    -- Kendi shell'imiz: duvar kâğıdı, bar, dock, bildirimler, arama, kontrol merkezi.
     -- -n: zaten çalışıyorsa ikincisini açma. Dosyaları kaydettikçe kendini yeniler.
     hl.exec_cmd("qs -n -p ~/projects/desk")
 
-    -- Geçici: kontrol merkezi, başlatıcı, bildirimler, kilit, duvar kâğıdı.
-    -- desk bu parçaları yazdıkça azalacak, Aşama 8'de tamamen çıkacak.
-    hl.exec_cmd("noctalia")
+    -- Boşta kalınca karartma, kilit, uyku; loginctl lock-session gelince desk'in kilidi
+    -- (hypridle.conf). Noctalia Aşama 8'de çıktı.
+    hl.exec_cmd("hypridle")
 
     -- Hyprland açıkken kapağı systemd değil lid.sh yönetsin.
     -- Oturum kapanınca bu kilit de kalkar; giriş ekranında kapak kapanınca

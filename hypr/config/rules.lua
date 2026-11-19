@@ -41,27 +41,20 @@ hl.window_rule({
     no_focus = true,
 })
 
--- Noctalia panellerine buzlu cam. Katman adlarını `hyprctl layers` ile doğrula.
-hl.layer_rule({
-    name = "noctalia-blur",
-    match = { namespace = "^noctalia-bar" },
-    blur = true,
-    ignore_alpha = 0.3,
-})
-
--- desk: menüler ve kontrol merkezi hafifçe büyüyerek açılır, solarak kapanır.
--- Hızlar appearance.lua → layersIn / layersOut. Ses göstergesi (desk-osd) yalnızca solar.
+-- desk: menüler, kontrol merkezi, bildirim merkezi, arama ve duvar kâğıdı seçici hafifçe
+-- büyüyerek açılır, solarak kapanır. Hızlar appearance.lua → layersIn / layersOut.
+-- Ses göstergesi (desk-osd) yalnızca solar.
 hl.layer_rule({
     name = "desk-popin",
-    match = { namespace = "^desk-(menu|control-center)$" },
+    match = { namespace = "^desk-(menu|control-center|notification-center|search|wallpaper-picker)$" },
     animation = "popin 92%",
 })
 
--- Bar ve Noctalia'nın katmanları animasyonsuz: Noctalia kendi animasyonunu yapıyor,
--- bar da shell her yeniden yüklendiğinde titremesin.
+-- Bar, dock ve duvar kâğıdı animasyonsuz: dock kendisi kayarak gizlenip çıkıyor, duvar kâğıdı
+-- kendi geçişini yapıyor, bar da shell her yeniden yüklendiğinde titremesin.
 hl.layer_rule({
     name = "no-anim-panels",
-    match = { namespace = "^(noctalia.*|desk-bar)$" },
+    match = { namespace = "^(desk-bar|desk-dock.*|desk-wallpaper)$" },
     no_anim = true,
 })
 

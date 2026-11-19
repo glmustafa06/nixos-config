@@ -13,7 +13,6 @@ in
   home.packages = with pkgs; [
     # --- Masaüstü: Hyprland araçları + geçici shell (Noctalia) + kendi shell'imiz için Quickshell
     quickshell
-    noctalia
     matugen
     imagemagick
     hypridle
@@ -26,9 +25,11 @@ in
     brightnessctl
     playerctl
     libnotify
+    xdg-utils
 
     # --- Görünüm
     papirus-icon-theme
+    colloid-icon-theme
     adw-gtk3
     nwg-look
     qt6Packages.qt6ct
@@ -99,6 +100,27 @@ in
   # Arka plan servisleri
   services.easyeffects.enable = true; # açılışta gizli başlar
   services.hyprpolkitagent.enable = true; # yönetici izni pencereleri
+  services.cliphist = {
+    enable = true;
+    allowImages = true;
+  };
+
+  # Starship ayarları (terminal)
+  programs.starship = {
+  enable = true;
+  settings = {
+    add_newline = true;
+    format = "$directory$git_branch$git_state$git_status$python$nix_shell$cmd_duration$status$character";
+    directory = { style = "bold cyan"; truncation_length = 3; truncate_to_repo = true; read_only = " 󰌾"; };
+    git_branch = { symbol = " "; style = "purple"; format = "[$symbol$branch]($style) "; };
+    git_status = { style = "yellow"; format = "([$all_status$ahead_behind]($style) )"; };
+    python = { style = "green"; format = "[(\\($virtualenv\\) )]($style)"; };
+    nix_shell = { style = "blue"; format = "[nix( $name)]($style) "; };
+    cmd_duration = { min_time = 2000; style = "yellow"; format = "[$duration]($style) "; };
+    status = { disabled = false; style = "red"; format = "[✗ $status]($style) "; };
+    character = { success_symbol = "[❯](bold green)"; error_symbol = "[❯](bold red)"; };
+    };
+  };
 
   # fish
   programs.fish = {

@@ -4,27 +4,27 @@
 
 local SUPER = "SUPER"
 local LID_SCRIPT = "~/.config/hypr/scripts/lid.sh" -- exec_cmd kabukta çalıştığı için ~ açılır
-local NOCTALIA = "noctalia msg "
 -- desk'e IPC ile ulaşmak için (shell.qml'deki IpcHandler'lar)
 local DESK = "qs ipc -p ~/projects/desk call "
+local SCREENSHOT = "~/projects/desk/scripts/screenshot.sh"
 
 -- Uygulamalar
 hl.bind(SUPER .. " + RETURN", hl.dsp.exec_cmd("kitty"))
 hl.bind(SUPER .. " + E", hl.dsp.exec_cmd("dolphin"))
 hl.bind(SUPER .. " + B", hl.dsp.exec_cmd("zen"))
 
--- Noctalia (geçici shell); Super+S artık desk'in kontrol merkezi
-hl.bind(SUPER .. " + SPACE", hl.dsp.exec_cmd(NOCTALIA .. "panel-toggle launcher"))
+-- desk: arama, kontrol merkezi, pano, duvar kâğıdı, oturum
+hl.bind(SUPER .. " + SPACE", hl.dsp.exec_cmd(DESK .. "search toggle"))
 hl.bind(SUPER .. " + S", hl.dsp.exec_cmd(DESK .. "controlcenter toggle"))
-hl.bind(SUPER .. " + SHIFT + S", hl.dsp.exec_cmd(NOCTALIA .. "settings-toggle"))
-hl.bind(SUPER .. " + W", hl.dsp.exec_cmd(NOCTALIA .. "panel-toggle wallpaper"))
-hl.bind(SUPER .. " + V", hl.dsp.exec_cmd(NOCTALIA .. "panel-toggle clipboard"))
-hl.bind(SUPER .. " + SHIFT + ESCAPE", hl.dsp.exec_cmd(NOCTALIA .. "panel-toggle session"))
+hl.bind(SUPER .. " + V", hl.dsp.exec_cmd(DESK .. "search clipboard"))
+hl.bind(SUPER .. " + W", hl.dsp.exec_cmd(DESK .. "wallpaper toggle"))
+hl.bind(SUPER .. " + SHIFT + ESCAPE", hl.dsp.exec_cmd(DESK .. "controlcenter open session"))
+-- Kilit: hypridle desk'in kilit ekranını açar (hypridle.conf → lock_cmd)
 hl.bind(SUPER .. " + ESCAPE", hl.dsp.exec_cmd("loginctl lock-session"), { locked = true })
 
--- Ekran görüntüsü
-hl.bind("Print", hl.dsp.exec_cmd(NOCTALIA .. "screenshot-region"))
-hl.bind("SHIFT + Print", hl.dsp.exec_cmd("grim - | wl-copy && notify-send 'Ekran görüntüsü' 'Tüm ekran panoya kopyalandı'"))
+-- Ekran görüntüsü: panoya ve Resimler/Ekran görüntüleri'ne (Print: alan seç, Shift+Print: bütün ekran)
+hl.bind("Print", hl.dsp.exec_cmd(SCREENSHOT .. " region"))
+hl.bind("SHIFT + Print", hl.dsp.exec_cmd(SCREENSHOT .. " full"))
 
 -- Ses, parlaklık, medya tuşları.
 -- Önce değer değişir, sonra desk'in göstergesi açılır. desk kapalı olsa da tuşlar çalışır.
