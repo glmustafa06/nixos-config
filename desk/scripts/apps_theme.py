@@ -23,6 +23,8 @@ Okunabilirlik scripts/contrast.py'de denetlenir (arkada beyaz sayfa olsa da).
 
 import colorsys
 import json
+import os
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -30,6 +32,8 @@ from pathlib import Path
 import themelib as tl
 
 STATE = Path.home() / ".local/state/desk/colors.json"
+# Ayarlar (desk/settings/Settings.qml ile aynı yol)
+SETTINGS = Path(os.environ.get("DESK_SETTINGS") or Path.home() / "nixos-config/desk-ayarlar.json")
 KITTY = Path.home() / ".config/kitty/desk-colors.conf"
 KVANTUM = Path.home() / ".config/Kvantum/Desk"
 TEMPLATES = tl.ROOT / "theme" / "kvantum"
@@ -93,6 +97,13 @@ def accents():
     try:
         raw_hex = json.loads(STATE.read_text()).get("accent", raw_hex)
     except (OSError, ValueError):
+        pass
+    # Ayarlar → Görünüm → Vurgu rengi (desk-ayarlar.json): seçildiyse duvar kâğıdınınkinin yerine
+    try:
+        chosen = json.loads(SETTINGS.read_text()).get("appearance", {}).get("accent", "")
+        if isinstance(chosen, str) and re.fullmatch(r"#[0-9a-fA-F]{6}", chosen):
+            raw_hex = chosen
+    except (OSError, ValueError, AttributeError):
         pass
     raw = tl.parse_hex(raw_hex)
     return tl.accent_from(raw, t), tl.accent_foreground_from(raw)

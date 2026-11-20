@@ -23,6 +23,9 @@ Singleton {
 
     // Bildirim merkezini aç/kapa (saate tıklamakla aynı)
     signal notificationCenterRequested
+    // Bildirim merkezini aç (açıksa kapatma) ve takvimde o günü göster. day: "2026-11-24"
+    // (takvim hatırlatmasına tıklanınca)
+    signal calendarRequested(string day)
 
     // Aramayı pano geçmişiyle aç (Super+V)
     signal clipboardRequested
@@ -32,4 +35,23 @@ Singleton {
 
     // Aramayı aç/kapa (Super+Boşluk, bardaki logo ve büyüteç)
     signal searchRequested
+
+    // Ayarlar penceresi (Super+Virgül, kontrol merkezindeki çark, aramada "Ayarlar").
+    // page: appearance, windows, bar, dock, notifications, display, power, input, screenshot,
+    // shortcuts, about ("" en son açılan)
+    property bool settingsOpen: false
+    property string settingsPage: "appearance"
+    // Pencere zaten açıkken tekrar istenince öne gelsin diye artar
+    property int settingsRaise: 0
+
+    function openSettings(page) {
+        if (page)
+            settingsPage = page;
+        if (settingsOpen)
+            settingsRaise++;
+        settingsOpen = true;
+    }
+    function toggleSettings() {
+        settingsOpen = !settingsOpen;
+    }
 }

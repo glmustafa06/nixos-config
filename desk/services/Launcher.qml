@@ -168,7 +168,8 @@ Singleton {
         list.push(setting("act:logout", "Oturumu kapat…", "Onay ister", "log-out", "oturumu kapat cikis logout", () => Ui.controlCenterRequested("session"), "İşlem"));
         list.push(setting("act:wallpaper", "Duvar kâğıdı", "Duvar kâğıdını değiştir", "image", "duvar kagidi arka plan wallpaper resim", () => Ui.wallpaperRequested()));
         list.push(setting("act:clipboard", "Pano", "Kopyalananların geçmişi", "clipboard-list", "pano kopyala gecmis clipboard yapistir", () => Ui.clipboardRequested()));
-        list.push(setting("act:screenshot", "Ekran görüntüsü", "Bir alan seç; panoya ve Resimler'e", "maximize", "ekran goruntusu screenshot alan kes", () => Quickshell.execDetached(["sh", "-c", "sleep 0.3; exec \"$1\" region", "sh", Quickshell.shellPath("scripts/screenshot.sh")]), "İşlem"));
+        list.push(setting("act:screenshot", "Ekran görüntüsü", "Alan, pencere ya da ekran; panoya ve Resimler'e", "camera", "ekran goruntusu screenshot alan kes pencere print", () => Screenshot.startLater("shot"), "İşlem"));
+        list.push(setting("act:record", Screenshot.recording ? "Ekran kaydını durdur" : "Ekran kaydı", "Alan, pencere ya da ekran; Videolar'a", "video", "ekran kaydi kayit video record kaydet", () => Screenshot.recording ? Screenshot.stopRecording() : Screenshot.startLater("record"), "İşlem"));
         return list;
     }
 

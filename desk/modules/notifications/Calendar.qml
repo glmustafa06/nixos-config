@@ -3,19 +3,35 @@ import QtQuick.Layouts
 import Quickshell
 import qs.theme
 import qs.components
+import qs.services
 
 // Ay takvimi (bildirim merkezinin üstü). Haftalar pazartesi başlar; bugün vurgu renginde.
 // Oklar ay değiştirir; başka bir aydayken "Bugün" düğmesi çıkar.
+// Bir güne tıklayınca seçilir (halka); altında o günün etkinlikleri (Agenda). Etkinliği olan
+// günlerin altında küçük nokta.
 Rectangle {
     id: root
 
     // Gösterilen ay (gün önemsiz)
     property date month: new Date()
+    // Seçili gün (etkinlikleri altta)
+    property date selected: new Date()
     // Bugün: saat gece yarısını geçince değişsin
     readonly property date today: clock.date
+    // Etkinlik eklenirken ya da düzenlenirken (Esc önce bunu kapatır)
+    readonly property bool editing: agenda.busy
 
     function reset() {
         month = new Date();
+        selected = new Date();
+        agenda.close();
+    }
+    function select(date) {
+        selected = date;
+        month = new Date(date.getFullYear(), date.getMonth(), 1);
+    }
+    function closeEditor() {
+        agenda.close();
     }
     function shift(step) {
         month = new Date(month.getFullYear(), month.getMonth() + step, 1);
@@ -33,6 +49,8 @@ Rectangle {
     readonly property int days: new Date(year, monthIndex + 1, 0).getDate()
     readonly property int rows: Math.ceil((offset + days) / 7)
     readonly property bool showingToday: year === today.getFullYear() && monthIndex === today.getMonth()
+    // Etkinliği olan günler: { 24: true, … }
+    readonly property var marked: Events.markedDays(year, monthIndex)
 
     implicitHeight: column.implicitHeight + 24
     radius: 16
@@ -63,7 +81,7 @@ Rectangle {
                 font.weight: Font.DemiBold
             }
             Rectangle {
-                visible: !root.showingToday
+                visible: !root.showingToday || root.selected.toDateString() !== root.today.toDateString()
                 implicitWidth: todayLabel.implicitWidth + 16
                 implicitHeight: 24
                 radius: 12
@@ -82,7 +100,7 @@ Rectangle {
                     anchors.fill: parent
                     hoverEnabled: true
                     cursorShape: Qt.PointingHandCursor
-                    onClicked: root.reset()
+                    onClicked: root.select(root.today)
                 }
             }
             ArrowButton {
@@ -126,17 +144,21 @@ Rectangle {
                     readonly property date date: new Date(root.year, root.monthIndex, 1 - root.offset + index)
                     readonly property bool inMonth: date.getMonth() === root.monthIndex
                     readonly property bool isToday: date.toDateString() === root.today.toDateString()
+                    readonly property bool isSelected: date.toDateString() === root.selected.toDateString()
+                    readonly property bool hasEvents: inMonth && root.marked[date.getDate()] === true
 
                     Layout.fillWidth: true
                     implicitHeight: 30
 
+                    // Bugün dolu daire; seçili gün halka; üstüne gelince hafif zemin
                     Rectangle {
                         anchors.centerIn: parent
                         width: 28
                         height: 28
                         radius: 14
-                        visible: cell.isToday
-                        color: Colors.accent
+                        color: cell.isToday ? Colors.accent : dayMouse.containsMouse ? Colors.hover : "transparent"
+                        border.width: cell.isSelected && !cell.isToday ? 1.5 : 0
+                        border.color: Colors.accent
                     }
                     Text {
                         anchors.centerIn: parent
@@ -149,8 +171,42 @@ Rectangle {
                             "tnum": 1
                         }
                     }
+                    // Etkinlik noktası
+                    Rectangle {
+                        visible: cell.hasEvents
+                        anchors {
+                            horizontalCenter: parent.horizontalCenter
+                            verticalCenter: parent.verticalCenter
+                            verticalCenterOffset: 9
+                        }
+                        width: 4
+                        height: 4
+                        radius: 2
+                        color: cell.isToday ? Colors.accentForeground : Colors.accent
+                    }
+                    MouseArea {
+                        id: dayMouse
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: root.select(cell.date)
+                    }
                 }
             }
+        }
+
+        Rectangle {
+            Layout.fillWidth: true
+            Layout.topMargin: 2
+            implicitHeight: 1
+            color: Colors.menuSeparator
+        }
+
+        Agenda {
+            id: agenda
+            Layout.fillWidth: true
+            day: root.selected
+            onDaySelected: date => root.select(date)
         }
     }
 

@@ -61,7 +61,7 @@ local function cycle_layout()
     set_layout(next_layout)
 end
 
-hl.bind("SUPER + N", cycle_layout)
+hl.bind("SUPER + N", cycle_layout, { description = "Düzen: Sıradaki düzen" })
 
 -- desk'in Düzen menüsü bu ikisini çağırır:
 --   hyprctl dispatch 'function() desk.set_layout("scrolling") end'
@@ -71,9 +71,9 @@ desk.set_layout = set_layout
 desk.cycle_layout = cycle_layout
 
 -- Super+Alt+D / S / M: doğrudan düzen seç (Mango: setlayout)
-hl.bind("SUPER + ALT + D", function() set_layout("dwindle") end)
-hl.bind("SUPER + ALT + S", function() set_layout("scrolling") end)
-hl.bind("SUPER + ALT + M", function() set_layout("monocle") end)
+hl.bind("SUPER + ALT + D", function() set_layout("dwindle") end, { description = "Düzen: Döşeli (dwindle)" })
+hl.bind("SUPER + ALT + S", function() set_layout("scrolling") end, { description = "Düzen: Kayan (scrolling)" })
+hl.bind("SUPER + ALT + M", function() set_layout("monocle") end, { description = "Düzen: Tek pencere (monocle)" })
 
 -- Super+R: scrolling'de sütun genişliği 0.5 → 0.8 → 1.0 (Mango: switch_proportion_preset)
 hl.bind("SUPER + R", function()
@@ -81,7 +81,7 @@ hl.bind("SUPER + R", function()
     if ws and ws.tiled_layout == "scrolling" then
         hl.dispatch(hl.dsp.layout("colresize +conf"))
     end
-end)
+end, { description = "Düzen: Sütun genişliği (kayan düzende)" })
 
 -- Super+C: scrolling'de odaktaki sütunu ekranın ortasına getir (Pencere menüsündeki "Sütunu ortala")
 hl.bind("SUPER + C", function()
@@ -89,4 +89,4 @@ hl.bind("SUPER + C", function()
     if ws and ws.tiled_layout == "scrolling" then
         hl.dispatch(hl.dsp.layout("center"))
     end
-end)
+end, { description = "Düzen: Sütunu ortala (kayan düzende)" })

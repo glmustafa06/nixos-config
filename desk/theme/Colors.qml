@@ -3,6 +3,7 @@ pragma Singleton
 import QtQuick
 import Quickshell
 import Quickshell.Io
+import qs.settings
 
 // Renkler: Grafit (koyu) tema.
 // Yüzeyler sabit ve nötr; vurgu rengi ve barın görünümü duvar kâğıdından gelir.
@@ -24,7 +25,10 @@ Singleton {
     // glassOpacity bundan düşük yazılırsa taban kullanılır (ve günlüğe uyarı düşer).
     // Daha saydam cam istersen: blur brightness'ı düşür, contrast.py yeni tabanı söyler, buraya yaz.
     readonly property real glassMinOpacity: 0.78
-    readonly property color glass: Qt.rgba(30 / 255, 32 / 255, 36 / 255, Math.max(glassOpacity, glassMinOpacity))
+    // Ayarlar → Görünüm → "Saydamlığı azalt": cam neredeyse örtücü olur.
+    // (true * 0.94 = 0.94, false * 0.94 = 0: contrast.py de bu satırı okuyabilsin diye koşulsuz yazıldı)
+    readonly property real glassSolidOpacity: 0.94
+    readonly property color glass: Qt.rgba(30 / 255, 32 / 255, 36 / 255, Math.max(glassOpacity, glassMinOpacity, Settings.reduceTransparency * glassSolidOpacity))
 
     readonly property color panel: glass
     readonly property color panelBorder: Qt.rgba(1, 1, 1, 0.11)
@@ -61,12 +65,76 @@ Singleton {
 
     // --- Dock (zemini de glass)
     readonly property color dockHover: Qt.rgba(1, 1, 1, 0.10)        // simgenin üstüne gelince arkası
+    readonly property color dockDropTarget: Qt.rgba(accent.r, accent.g, accent.b, 0.32) // üstüne dosya getirilince
+    // Bildirim rozeti: beyaz yazıyla okunur kırmızı (kontrast ≥ 4.5; macOS'unkinden biraz koyu)
+    readonly property color badge: "#dc3226"
+    readonly property color badgeText: "#ffffff"
+    readonly property color badgeBorder: Qt.rgba(0, 0, 0, 0.22)
+
+    // --- Ekran görüntüsü (modules/screenshot)
+    readonly property color screenshotDimIdle: Qt.rgba(0, 0, 0, 0.22)   // seçim başlamadan donmuş ekran
+    readonly property color screenshotDim: Qt.rgba(0, 0, 0, 0.45)       // seçilen yerin dışı
+    readonly property color screenshotEdge: Qt.rgba(1, 1, 1, 0.92)      // seçimin kenarı
+    readonly property color previewBadge: Qt.rgba(0, 0, 0, 0.62)        // önizlemedeki yuvarlak düğmeler
+    readonly property color previewButtonHover: Qt.rgba(0, 0, 0, 0.8)
+    readonly property color previewShade: Qt.rgba(0, 0, 0, 0.62)        // önizlemenin altındaki karartma
+    readonly property color recordDot: "#ff453a"                        // kayıt sürerken adadaki nokta
+    readonly property color switcherSelected: Qt.rgba(1, 1, 1, 0.16)    // pencere değiştiricide seçili simgenin zemini
     readonly property color dockIndicator: Qt.rgba(233 / 255, 230 / 255, 224 / 255, 0.62) // açık uygulamanın noktası
     readonly property color dockIndicatorFocused: accent                // odaktaki uygulamanınki
     readonly property color dockShadow: Qt.rgba(0, 0, 0, 0.32)         // dock'un altındaki yumuşak gölge
     readonly property color dockSeparator: Qt.rgba(1, 1, 1, 0.14)
     // Ad etiketi: küçük olduğu için bulanıklık yerine neredeyse örtücü
     readonly property color tooltip: Qt.rgba(30 / 255, 32 / 255, 36 / 255, 0.94)
+
+    // --- Ayarlar penceresi (modules/settings): kenar çubuğu cam, içerik örtücü
+    readonly property color settingsBackground: "#1c1e22"
+    readonly property color settingsCard: Qt.rgba(1, 1, 1, 0.055)          // ayar kartı
+    readonly property color settingsCardBorder: Qt.rgba(1, 1, 1, 0.06)
+    readonly property color settingsSeparator: Qt.rgba(1, 1, 1, 0.07)      // kartın satırları arası
+    readonly property color settingsRowHover: Qt.rgba(1, 1, 1, 0.04)
+    readonly property color sidebarSelected: Qt.rgba(1, 1, 1, 0.13)        // seçili bölüm
+    readonly property color segment: Qt.rgba(0, 0, 0, 0.26)                // seçenek düğmelerinin zemini
+    readonly property color segmentSelected: Qt.rgba(1, 1, 1, 0.16)
+    readonly property color sliderTrackThin: Qt.rgba(1, 1, 1, 0.16)
+    readonly property color sliderKnob: "#f3f1ed"
+    readonly property color keyCap: Qt.rgba(1, 1, 1, 0.09)                 // kısayol tuşu
+    readonly property color keyCapBorder: Qt.rgba(1, 1, 1, 0.13)
+    readonly property color dragShadow: Qt.rgba(0, 0, 0, 0.45)             // sürüklenen satırın gölgesi
+    // Bölüm simgelerinin kareleri (beyaz simge okunsun diye orta-koyu tonlar)
+    readonly property var settingsSections: ({
+            appearance: "#8a5cd6",
+            windows: "#2f6fd6",
+            bar: "#56657a",
+            dock: "#5452c9",
+            notifications: "#d63c42",
+            display: "#1f7fb8",
+            power: "#2a9448",
+            input: "#636b76",
+            screenshot: "#b65d16",
+            shortcuts: "#4a5260",
+            about: "#7c828b"
+        })
+    readonly property color settingsSectionIcon: "#ffffff"
+    // Karenin rengi; top: üst kenarı (%12 aydınlık, macOS simgeleri gibi hafif degrade)
+    function settingsSectionColor(section, top) {
+        const c = settingsSections[section] ?? settingsSections.about;
+        return top ? Qt.lighter(c, 1.12) : Qt.color(c);
+    }
+    // Hazır vurgu renkleri (Ayarlar → Görünüm); okunur hâle Colors.readableAccent getirir
+    readonly property var accentPresets: [
+        { name: "Mavi", color: "#3d8bfd" },
+        { name: "Mor", color: "#9d6bf2" },
+        { name: "Pembe", color: "#ec6aa5" },
+        { name: "Kırmızı", color: "#ec5b54" },
+        { name: "Turuncu", color: "#f29a3a" },
+        { name: "Sarı", color: "#e6c547" },
+        { name: "Yeşil", color: "#5fbf6e" },
+        { name: "Turkuaz", color: "#5dbfae" },
+        { name: "Grafit", color: "#9aa3ad" }
+    ]
+    // Duvar kâğıdının vurgusu (Ayarlar'da "Otomatik" seçeneğinin rengi)
+    readonly property color wallpaperAccent: readableAccent(Qt.color(colorFile.accent))
 
     // --- Yazı
     readonly property color text: "#f3f1ed"
@@ -117,7 +185,10 @@ Singleton {
     // scripts/colors.sh duvar kâğıdının üst şeridini ölçer (scripts/bar_tone.py) ve
     // hangi görünümün daha okunur olduğunu colors.json'a "barTone" olarak yazar.
     // Yalnızca "Background" ve "Text" değerleri ölçümde kullanılır; değiştirirsen colors.sh'ı yeniden çalıştır.
-    readonly property bool lightBar: colorFile.barTone === "light"
+    // Ayarlar → Görünüm → Bar: "auto" ölçüme uyar; "dark" ya da "light" sabitler
+    readonly property string barToneSetting: Settings.s.appearance.barTone
+    readonly property bool barToneForced: barToneSetting === "dark" || barToneSetting === "light"
+    readonly property bool lightBar: barToneForced ? barToneSetting === "light" : colorFile.barTone === "light"
     // Renklerin üretildiği resim (colors.sh); duvar kâğıdı seçilmemişse başlangıç duvar kâğıdı bu olur
     readonly property string source: colorFile.source
 
@@ -134,10 +205,17 @@ Singleton {
     readonly property color barLightTextMuted: "#55585d"
     readonly property color barLightHover: Qt.rgba(0, 0, 0, 0.09)
 
+    // Görünüm elle seçilip duvar kâğıdına uymayabileceği için zemin bu kadar örtücü olur
+    // (beyaz duvar kâğıdında koyu bar, siyahta açık bar okunur: contrast.py → "Bar, elle seçilmiş")
+    readonly property real barForcedOpacity: 0.66
+    readonly property real barSolidOpacity: 0.86       // Saydamlığı azalt
     // Üst şerit karışıksa (yarısı beyaz, yarısı siyah) bar_tone.py zemini koyulaştırır
     readonly property color barBackground: {
         const base = lightBar ? barLightBackground : barDarkBackground;
-        return Qt.rgba(base.r, base.g, base.b, Math.max(base.a, colorFile.barOpacity));
+        let alpha = Math.max(base.a, barToneForced ? barForcedOpacity : colorFile.barOpacity);
+        if (Settings.reduceTransparency)
+            alpha = Math.max(alpha, barSolidOpacity);
+        return Qt.rgba(base.r, base.g, base.b, alpha);
     }
     readonly property color barBorder: lightBar ? barLightBorder : barDarkBorder
     readonly property color barText: lightBar ? barLightText : barDarkText
@@ -157,7 +235,9 @@ Singleton {
     readonly property real accentLightnessMin: 0.55
     readonly property real accentLightnessMax: 0.72
     readonly property real accentMinLuminance: 0.37
-    readonly property color _raw: colorFile.accent
+    // Ayarlar → Görünüm → Vurgu rengi: boşsa duvar kâğıdından (matugen)
+    readonly property string accentSetting: Settings.s.appearance.accent
+    readonly property color _raw: /^#[0-9a-fA-F]{6}$/.test(accentSetting) ? accentSetting : colorFile.accent
     readonly property color accent: readableAccent(_raw)
     readonly property color accentHover: Qt.lighter(accent, 1.08)
     // Vurgu renginin üstündeki yazı: aynı tonun çok koyusu
@@ -173,8 +253,15 @@ Singleton {
         return 0.2126 * lin(c.r) + 0.7152 * lin(c.g) + 0.0722 * lin(c.b);
     }
 
-    // scripts/themelib.py → accent_from ile aynı adımlar
+    // Herhangi bir vurgunun üstündeki yazı rengi (accentForeground'un aynısı)
+    function accentForegroundFor(c) {
+        const color = Qt.color(c);
+        return color.hslHue < 0 ? Qt.color("#0b1714") : Qt.hsla(color.hslHue, 0.35, 0.08, 1);
+    }
+
+    // scripts/themelib.py → accent_from ile aynı adımlar (raw: renk ya da "#rrggbb")
     function readableAccent(raw) {
+        raw = Qt.color(raw);
         if (raw.hslHue < 0)
             return raw; // gri: olduğu gibi
         const s = clamp(raw.hslSaturation, accentSaturationMin, accentSaturationMax);

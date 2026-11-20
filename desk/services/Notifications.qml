@@ -5,6 +5,7 @@ import Quickshell
 import Quickshell.Io
 import Quickshell.Services.Notifications
 import Quickshell.Services.UPower
+import qs.settings
 
 // Bildirimler: kendi bildirim sunucumuz (org.freedesktop.Notifications).
 // Sistemde tek bildirim sunucusu olabilir: dunst, mako gibi başka biri çalışmamalı (plan: Sorun 63).
@@ -14,14 +15,36 @@ import Quickshell.Services.UPower
 //
 // Her kayıt düz bir JS nesnesi:
 //   { key, appName, desktopEntry, summary, body, icon (dosya adresi), glyph (çizgi simge adı),
-//     urgency (0 düşük, 1 normal, 2 acil), time (ms), live (Notification ya da null), run }
+//     urgency (0 düşük, 1 normal, 2 acil), time (ms), seen, live (Notification ya da null), run }
+// seen: kullanıcı gördü mü (dock'taki rozet görülmemişleri sayar; uygulamaya geçince görülür).
 // live: uygulamanın gönderdiği canlı bildirim; eylemler ve yanıt bunun üstünden yapılır.
 // Shell yeniden açılınca live kalmaz (dosyadan gelenlerde null); eylemler o zaman yoktur.
 Singleton {
     id: root
 
     readonly property int maxHistory: 50
-    readonly property int popupTime: 5000
+    // Ayarlar → Bildirimler: adada kaç saniye kalır
+    readonly property int popupTime: Math.max(2, Settings.s.notifications.popupSeconds) * 1000
+    // Ayarlar → Bildirimler → Uygulamalar: adada gösterilmeyenler (merkezde yine görünür)
+    readonly property var hiddenApps: Settings.s.notifications.hiddenApps
+
+    // Bildirim göndermiş uygulamalar (Ayarlar'daki liste): merkezdekiler, gizlenenler ve
+    // desk'in kendi bildirimleri. Adlar alfabeyle.
+    readonly property var knownApps: {
+        const names = new Set(["Takvim", "Pil"]);
+        for (const entry of history)
+            names.add(entry.appName || "Bildirim");
+        for (const name of hiddenApps)
+            names.add(name);
+        return Array.from(names).sort((a, b) => a.localeCompare(b, "tr"));
+    }
+
+    function setAppShown(appName, shown) {
+        const list = hiddenApps.filter(name => name !== appName);
+        if (!shown)
+            list.push(appName);
+        Settings.set("notifications.hiddenApps", list);
+    }
     // Adada sırada en çok bu kadar bildirim bekler; fazlası (en eskiler) yalnızca merkezde kalır.
     // Bir uygulama art arda 30 bildirim gönderirse ada 2,5 dakika meşgul olmasın.
     readonly property int maxQueue: 3
@@ -62,6 +85,48 @@ Singleton {
             map[name].entries.push(entry);
         }
         return order.map(name => map[name]);
+    }
+
+    // ---------- Dock rozetleri ----------
+    // Dock anahtarı → görülmemiş bildirim sayısı. Bildirim gelirken uygulama odaktaysa görülmüş sayılır;
+    // uygulamaya geçince hepsi görülür. Merkezden silinen bildirim sayıdan düşer.
+    readonly property var badges: {
+        DesktopEntries.applications.values; // kayıtlar yüklenince yeniden hesaplansın
+        const counts = {};
+        for (const entry of history) {
+            if (entry.seen)
+                continue;
+            const key = DockApps.keyForApp(entry.desktopEntry, entry.appName);
+            if (key !== "")
+                counts[key] = (counts[key] ?? 0) + 1;
+        }
+        return counts;
+    }
+
+    // Odaktaki uygulamanın dock anahtarı ("" pencere yoksa)
+    function focusedKey() {
+        return WindowManager.hasWindow ? DockApps.keyOf(WindowManager.window) : "";
+    }
+
+    function markSeen(key) {
+        if (key === "")
+            return;
+        let changed = false;
+        for (const entry of history) {
+            if (!entry.seen && DockApps.keyForApp(entry.desktopEntry, entry.appName) === key) {
+                entry.seen = true;
+                changed = true;
+            }
+        }
+        if (changed)
+            history = history.slice();
+    }
+
+    Connections {
+        target: WindowManager
+        function onWindowChanged() {
+            root.markSeen(root.focusedKey());
+        }
     }
 
     // ---------- Sunucu ----------
@@ -113,6 +178,7 @@ Singleton {
             glyph: "",
             urgency: urgencyOf(n),
             time: Date.now(),
+            seen: focusedKey() !== "" && focusedKey() === DockApps.keyForApp(n.desktopEntry, n.appName),
             transient: n.transient,
             live: n
         };
@@ -190,6 +256,7 @@ Singleton {
             glyph: glyph,
             urgency: urgency,
             time: Date.now(),
+            seen: true,
             transient: false,
             live: null,
             run: run ?? null,
@@ -242,6 +309,8 @@ Singleton {
         if (QuickSettings.doNotDisturb)
             return true;
         if ((mutedUntil[entry.appName] ?? 0) > Date.now())
+            return true;
+        if (hiddenApps.includes(entry.appName || "Bildirim"))
             return true;
         // Tam ekran video ya da oyun sırasında gösterilmez
         return WindowManager.isFullscreen(WindowManager.window);
@@ -300,7 +369,7 @@ Singleton {
     // Acil bildirim kapatılana kadar kalır; fare üstündeyken beklenir
     function restartPopupTimer() {
         if (current && current.urgency !== 2 && !hold) {
-            popupTimer.interval = current.urgency === 0 ? 3500 : popupTime;
+            popupTimer.interval = current.urgency === 0 ? Math.min(3500, popupTime) : popupTime;
             popupTimer.restart();
         } else {
             popupTimer.stop();
@@ -493,7 +562,8 @@ Singleton {
                     icon: e.icon.startsWith("image://") ? "" : e.icon,
                     glyph: e.glyph,
                     urgency: e.urgency,
-                    time: e.time
+                    time: e.time,
+                    seen: e.seen === true
                 }))
     }
     onHistoryChanged: {
@@ -516,7 +586,8 @@ Singleton {
                     live: null,
                     transient: false,
                     icon: e.icon ?? "",
-                    glyph: e.glyph ?? ""
+                    glyph: e.glyph ?? "",
+                    seen: e.seen ?? true // eski kayıtlarda yok: rozet çıkarmasın
                 }));
             root.history = root.history.concat(saved).slice(0, root.maxHistory);
             root.loaded = true;

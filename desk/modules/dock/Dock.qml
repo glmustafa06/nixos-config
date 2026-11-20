@@ -3,15 +3,29 @@ import QtQuick.Effects
 import Quickshell
 import Quickshell.Wayland
 import Quickshell.Hyprland
+import Quickshell.Widgets
 import qs.theme
 import qs.components
 import qs.services
+import qs.settings
 
 // Dock: ekranın altında ortada, menülerle aynı buzlu camdan.
 // Sırayla: sabitlenen uygulamalar | sabitlenmemiş açık uygulamalar | İndirilenler, çöp kutusu.
 //
 // Akıllı gizleme: o alandaki bir pencere dock'un yerine girince kayarak gizlenir;
 // fare ekranın alt kenarına gelince çıkar. Boş masaüstünde hep görünür.
+// Ayarlar → Dock: "Hep görünür" (pencereler dock'un üstünde biter) ya da "Hep gizli" (yalnızca
+// fare alt kenara gelince çıkar). Simge boyu, İndirilenler/çöp, rozetler ve noktalar da oradan.
+//
+// Sürükleyerek sıralama: sabitlenen bir simge sürüklenince fareyi izler, ötekiler kayarak yer açar.
+// Açık ama sabitlenmemiş bir uygulama sabitlenenlerin arasına bırakılırsa sabitlenir. Dock'un çok
+// üstünde bırakılırsa vazgeçilir (simge yerine döner).
+//
+// Dosya bırakma: Dolphin'den sürüklenen dosya bir uygulamanın simgesine bırakılırsa onunla açılır
+// (dosya açamayan uygulama vurgulanmaz), çöp kutusuna bırakılırsa çöpe taşınır. Dock gizliyse dosya
+// ekranın alt kenarına getirilince çıkar.
+//
+// Rozet: uygulamanın görülmemiş bildirim sayısı (Notifications.badges).
 //
 // İki pencere var:
 //  - dock penceresi: tam genişlikte; dock, ad etiketi ve sağ tık menüsü bunun içinde.
@@ -33,7 +47,10 @@ PanelWindow {
     implicitHeight: Metrics.dockWindowHeight
     // Gösterilirken ya da kayarak gizlenirken açık; tamamen gizlenince kapanır
     visible: shown || panel.y < height
-    exclusionMode: ExclusionMode.Ignore
+    // Hep görünürken pencereler dock'un üstünde biter (dock'un yeri ayrılır)
+    readonly property string behavior: Settings.s.dock.behavior
+    exclusionMode: behavior === "always" ? ExclusionMode.Normal : ExclusionMode.Ignore
+    exclusiveZone: behavior === "always" ? Metrics.dockHeight + Metrics.dockMargin : 0
     color: "transparent"
     WlrLayershell.layer: WlrLayer.Top
     WlrLayershell.namespace: "desk-dock"
@@ -61,12 +78,165 @@ PanelWindow {
     }
 
     // --- Öğeler
+    // Sürüklerken sabitlenenler geçici sırayla gösterilir (dragOrder). Sürükleme boyunca ayırıcı yerinde
+    // kalır: dock'un genişliği değişip simgeler kaymasın.
+    // Hepsi tek bağlamada hesaplanır: ara özellikler ayrı güncellenseydi bir an aynı anahtar iki kez
+    // görünebilirdi (ScriptModel'in sırası bozulur).
     readonly property var keys: {
-        const list = DockApps.pinnedKeys.slice();
-        if (DockApps.runningKeys.length > 0)
-            list.push("sep:apps", ...DockApps.runningKeys);
-        list.push("sep:places", "place:downloads", "place:trash");
-        return list;
+        const pinned = dragOrder ?? DockApps.pinnedKeys;
+        const running = DockApps.runningKeys.filter(key => !pinned.includes(key));
+        const list = pinned.slice();
+        if (running.length > 0 || (dragKey !== "" && DockApps.runningKeys.length > 0))
+            list.push("sep:apps", ...running);
+        if (Settings.s.dock.places)
+            list.push("sep:places", "place:downloads", "place:trash");
+        return list.filter((key, index) => list.indexOf(key) === index);
+    }
+
+    // Dock'taki simge (anahtarına göre); yoksa null
+    function itemFor(key) {
+        for (const child of row.children) {
+            if (child.key === key && child.dock !== undefined)
+                return child;
+        }
+        return null;
+    }
+
+    // --- Sürükleyerek sıralama
+    property string dragKey: ""         // sürüklenen simge ("" sürükleme yok)
+    property var dragOrder: null        // sürüklerken sabitlenenlerin geçici sırası
+    property bool dragSettling: false   // bırakıldı: simge yerine kayıyor
+    property point dragPoint            // sürüklenen simgenin ortası (content'e göre)
+    property point dragGrab             // farenin simgenin ortasına uzaklığı
+    property string dragIcon: ""
+    // Dock'un bu kadar üstünde bırakılırsa vazgeçilir
+    readonly property int dragCancelDistance: 90
+    readonly property bool dragCanceling: dragKey !== "" && !dragSettling && dragPoint.y < panel.y - dragCancelDistance
+
+    // item: sürüklenmeye başlanan DockItem; x, y: farenin item'deki yeri. Sürüklenemiyorsa false.
+    function beginDrag(item, x, y) {
+        if (item.separator || item.place || dragKey !== "")
+            return false;
+        closeMenus();
+        hoveredItem = null;
+        labelItem = null;
+        const center = item.mapToItem(content, item.width / 2, item.height / 2);
+        const point = item.mapToItem(content, x, y);
+        dragGrab = Qt.point(point.x - center.x, point.y - center.y);
+        dragPoint = center;
+        dragIcon = item.iconSource;
+        dragOrder = DockApps.pinnedKeys.slice();
+        dragKey = item.key;
+        return true;
+    }
+
+    function moveDrag(item, x, y) {
+        if (dragKey === "" || dragSettling)
+            return;
+        const point = item.mapToItem(content, x, y);
+        dragPoint = Qt.point(point.x - dragGrab.x, point.y - dragGrab.y);
+
+        // Sürüklenen simgenin ortası dock'un hangi yuvasında (sabitlenenler soldan eşit aralıkla dizili)
+        const slot = Metrics.dockIconSize + Metrics.dockSpacing;
+        const local = row.mapFromItem(content, dragPoint.x, 0).x;
+        const others = dragOrder.filter(key => key !== dragKey);
+        const pinned = DockApps.pinnedKeys.includes(dragKey);
+        let order = others.slice();
+        // Sabitlenmemiş uygulama: yalnızca sabitlenenlerin üstüne (ayırıcının yarısına kadar) gelince araya girer
+        if (pinned || local < others.length * slot + slot / 2)
+            order.splice(Math.max(0, Math.min(Math.floor(local / slot), others.length)), 0, dragKey);
+        if (order.join("\n") !== dragOrder.join("\n"))
+            dragOrder = order;
+    }
+
+    function endDrag() {
+        if (dragKey === "" || dragSettling)
+            return;
+        if (dragCanceling)
+            dragOrder = DockApps.pinnedKeys.slice();
+        // Simge dock'taki yerine kayar, sonra sıra kaydedilir
+        dragSettling = true;
+        dragPoint = slotCenter(dragKey);
+        settleTimer.restart();
+    }
+
+    // Sürüklenen simge dock'tan kalktı (uygulama sürüklenirken kapandı): iz bırakmadan bırak
+    function cancelDrag() {
+        settleTimer.stop();
+        dragOrder = null;
+        dragKey = "";
+        dragSettling = false;
+    }
+
+    // Anahtarın dock'taki yerinin ortası (content'e göre). Row'un yerleşimini beklemeden hesaplanır.
+    function slotCenter(key) {
+        let x = 0;
+        for (const k of keys) {
+            const width = k.startsWith("sep:") ? Metrics.dockSeparatorWidth : Metrics.dockIconSize;
+            if (k === key)
+                return row.mapToItem(content, x + width / 2, row.height / 2);
+            x += width + Metrics.dockSpacing;
+        }
+        return dragPoint;
+    }
+
+    Timer {
+        id: settleTimer
+        interval: Metrics.durationFast + 20
+        onTriggered: {
+            const order = root.dragOrder;
+            if (order && order.join("\n") !== DockApps.pinnedKeys.join("\n"))
+                DockApps.setPinnedOrder(order);
+            root.dragOrder = null;
+            root.dragKey = "";
+            root.dragSettling = false;
+        }
+    }
+
+    // --- Dosya bırakma
+    property string dropKey: ""         // dosya sürüklenirken altındaki (dosyayı kabul eden) simge
+
+    // Bırakılan adresler: yerel dosyalar yol olarak, ötekiler (bağlantılar) olduğu gibi
+    function dropPaths(urls) {
+        return Array.from(urls ?? []).map(String).map(url => url.startsWith("file://") ? decodeURIComponent(url.replace(/^file:\/\/(localhost)?/, "")) : url);
+    }
+
+    function canDrop(key) {
+        if (key === "place:trash")
+            return true;
+        if (key === "" || key.startsWith("sep:") || key.startsWith("place:"))
+            return false;
+        return DockApps.canOpenFiles(key);
+    }
+
+    function updateDrop(x, y) {
+        const local = dropArea.mapToItem(row, x, y);
+        const key = row.childAt(local.x, row.height / 2)?.key ?? "";
+        dropKey = canDrop(key) ? key : "";
+    }
+
+    function finishDrop(urls) {
+        const key = dropKey;
+        dropKey = "";
+        const paths = dropPaths(urls);
+        if (key === "" || paths.length === 0)
+            return false;
+        if (key === "place:trash") {
+            const files = paths.filter(path => path.startsWith("/"));
+            Trash.trashFiles(files);
+            return files.length > 0;
+        }
+        const item = itemFor(key);
+        if (item && !item.running)
+            item.startLaunching();
+        DockApps.openWith(key, paths);
+        return true;
+    }
+
+    // Dosya alt kenara gelince dock bir süre görünür (dock'un üstüne çıkılınca orası tutar)
+    Timer {
+        id: dropRevealTimer
+        interval: 1500
     }
 
     // --- Menü: dock penceresinin içinde, aynı anda tek menü
@@ -133,8 +303,13 @@ PanelWindow {
         return info.pinned === true || (toplevel.workspace ?? null) === workspace;
     }
 
-    // Bu alandaki bir pencere dock'un yerine giriyor mu (tam ekran pencere her zaman girer)
+    // Bu alandaki bir pencere dock'un yerine giriyor mu (tam ekran pencere her zaman girer).
+    // Hep görünürken hiç, hep gizliyken her zaman "giriyor" sayılır.
     readonly property bool overlapped: {
+        if (behavior === "always")
+            return false;
+        if (behavior === "autohide")
+            return true;
         if (!workspace)
             return false;
         const r = dockRect;
@@ -166,7 +341,7 @@ PanelWindow {
 
     // Fare dock'un ya da alt kenar şeridinin üstünde
     readonly property bool hovering: hover.hovered || edgeHover.hovered
-    readonly property bool wanted: !overlapped || hovering || openMenu !== ""
+    readonly property bool wanted: !overlapped || hovering || openMenu !== "" || dragKey !== "" || dropArea.containsDrag || dropRevealTimer.running
     property bool shown: true
 
     onWantedChanged: {
@@ -213,6 +388,31 @@ PanelWindow {
             y: panel.y + panel.height
             width: panel.width
             height: Math.max(0, root.height - y)
+        }
+
+        // Dosya bırakma: dock ve altındaki boşluk. Bırakma kabul edilir ama dosya yalnızca kabul eden
+        // simgenin üstündeyse kullanılır (kaynak program dosyaya dokunmaz: kopyala eylemi).
+        DropArea {
+            id: dropArea
+
+            x: panel.x
+            y: panel.y
+            width: panel.width
+            height: Math.max(0, root.height - y)
+            keys: ["text/uri-list"]
+
+            onEntered: drag => {
+                drag.accept(Qt.CopyAction);
+                root.updateDrop(drag.x, drag.y);
+            }
+            onPositionChanged: drag => root.updateDrop(drag.x, drag.y)
+            onExited: root.dropKey = ""
+            onDropped: drop => {
+                if (root.finishDrop(drop.urls))
+                    drop.accept(Qt.CopyAction);
+                else
+                    drop.accepted = false;
+            }
         }
 
         // Altında yumuşak gölge: dock'u duvar kâğıdından hafifçe ayırır (abartısız)
@@ -288,6 +488,41 @@ PanelWindow {
             }
         }
 
+        // Sürüklenen simge: fareyi izler; bırakılınca dock'taki yerine kayar
+        IconImage {
+            id: ghost
+
+            visible: root.dragKey !== ""
+            implicitSize: Metrics.dockIconSize
+            source: root.dragIcon
+            x: root.dragPoint.x - width / 2
+            y: root.dragPoint.y - height / 2
+            scale: root.dragSettling ? 1 : 1.08
+            // Vazgeçilecek yükseklikte soluk
+            opacity: root.dragCanceling ? 0.5 : 1
+
+            Behavior on x {
+                enabled: root.dragSettling
+                NumberAnimation {
+                    duration: Metrics.durationFast
+                    easing.type: Easing.OutCubic
+                }
+            }
+            Behavior on y {
+                enabled: root.dragSettling
+                NumberAnimation {
+                    duration: Metrics.durationFast
+                    easing.type: Easing.OutCubic
+                }
+            }
+            Behavior on scale {
+                NumberAnimation { duration: Metrics.durationFast }
+            }
+            Behavior on opacity {
+                NumberAnimation { duration: Metrics.durationFast }
+            }
+        }
+
         // Sağ tık menüsü: tıklanan simgenin üstünde, ortalı (x, showMenu'de hesaplanır)
         DockMenu {
             id: menu
@@ -301,7 +536,7 @@ PanelWindow {
         Rectangle {
             id: label
 
-            readonly property bool active: root.labelItem !== null && root.openMenu === "" && root.shown
+            readonly property bool active: root.labelItem !== null && root.openMenu === "" && root.shown && root.dragKey === ""
             property string title: ""
 
             Connections {
@@ -362,6 +597,14 @@ PanelWindow {
 
             HoverHandler {
                 id: edgeHover
+            }
+
+            // Dosya sürüklenirken alt kenara gelinince dock çıkar (bırakma dock'ta yapılır)
+            DropArea {
+                anchors.fill: parent
+                keys: ["text/uri-list"]
+                onEntered: dropRevealTimer.restart()
+                onPositionChanged: dropRevealTimer.restart()
             }
         }
     }

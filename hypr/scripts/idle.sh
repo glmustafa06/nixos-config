@@ -1,9 +1,11 @@
 #!/usr/bin/env bash
-# hypridle'ın çağırdığı işler (hypridle.conf). Pilde ve prizde süreler farklı:
-#   dim <battery|ac>   : o güç kaynağındaysan ekranı karart
-#   lock <battery|ac>  : o güç kaynağındaysan kilitle ve ekranı kapat
-#   late               : 15 dk — pildeysen uyut, prizdeysen kilitle ve ekranı kapat
-#   undim, wake        : kullanıcı döndü: parlaklığı geri al, ekranı aç
+# hypridle'ın çağırdığı işler. Pilde ve prizde süreler farklı (Ayarlar → Pil ve güç; desk süreleri
+# ~/.local/state/desk/hypridle.conf'a yazar, yoksa ~/.config/hypr/hypridle.conf):
+#   dim <battery|ac>     : o güç kaynağındaysan ekranı karart
+#   lock <battery|ac>    : o güç kaynağındaysan kilitle ve ekranı kapat
+#   suspend <battery|ac> : o güç kaynağındaysan uyut
+#   late                 : 15 dk — pildeysen uyut, prizdeysen kilitle ve ekranı kapat (eski dosya)
+#   undim, wake          : kullanıcı döndü: parlaklığı geri al, ekranı aç
 # Türkçe yerel ayarı betiği bozmasın (plan: Sorun 19)
 export LC_ALL=C
 
@@ -47,6 +49,10 @@ case "${1:-}" in
         sleep 2
         screen off
         ;;
+    suspend)
+        source_is "${2:-battery}" || exit 0
+        systemctl suspend
+        ;;
     late)
         if on_ac; then
             loginctl lock-session
@@ -61,7 +67,7 @@ case "${1:-}" in
         "$0" undim
         ;;
     *)
-        echo "Usage: $0 dim|lock <battery|ac> | late | undim | wake" >&2
+        echo "Usage: $0 dim|lock|suspend <battery|ac> | late | undim | wake" >&2
         exit 1
         ;;
 esac

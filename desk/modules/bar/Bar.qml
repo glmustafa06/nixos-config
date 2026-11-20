@@ -3,13 +3,15 @@ import QtQuick.Layouts
 import Quickshell
 import Quickshell.Wayland
 import Quickshell.Hyprland
+import Quickshell.Services.SystemTray
 import qs.theme
 import qs.components
 import qs.services
 import qs.modules.controlcenter
 import qs.modules.notifications
+import qs.settings
 
-// Üst bar: solda logo, uygulama adı ve menüler; ortada ada; sağda tepsi, durum simgeleri ve saat.
+// Üst bar: solda dört nokta (arama), uygulama adı ve menüler; ortada ada; sağda tepsi, durum simgeleri ve saat.
 // Renkleri duvar kâğıdına uyar: açık duvar kâğıdında koyu yazı (Colors.bar*, scripts/bar_tone.py).
 // Pencere bardan uzun, çünkü ada açılınca aşağı taşıyor. Boş kısım saydam ve
 // tıklamaları alttaki pencerelere geçirir (mask). Pencereler yine barın altından başlar.
@@ -118,6 +120,12 @@ PanelWindow {
             if (root.onFocusedScreen())
                 root.toggleMenu(notificationCenter.menuKey);
         }
+        function onCalendarRequested(day) {
+            if (!root.onFocusedScreen())
+                return;
+            root.openMenu = notificationCenter.menuKey;
+            notificationCenter.showDay(day);
+        }
     }
 
     // Menü açıkken bar ve menü dışına tıklanınca Hyprland haber verir, menü kapanır.
@@ -138,7 +146,7 @@ PanelWindow {
 
     SystemClock {
         id: clock
-        precision: SystemClock.Minutes
+        precision: root.barSettings.seconds ? SystemClock.Seconds : SystemClock.Minutes
     }
 
     // ---------- Bar şeridi ----------
@@ -173,7 +181,7 @@ PanelWindow {
             }
         }
 
-        // --- Sol: logo, uygulama adı, Pencere, Düzen
+        // --- Sol: dört nokta (arama), uygulama adı, Pencere, Düzen
         RowLayout {
             anchors {
                 left: parent.left
@@ -182,13 +190,25 @@ PanelWindow {
             }
             spacing: Metrics.barItemSpacing
 
+            // Sol üst: dört nokta (barın yazı renginde); tıklayınca arama
             BarItem {
                 padding: 8
                 onClicked: Ui.searchRequested()
 
-                OrbitLogo {
-                    size: 18
-                    color: Colors.barAccent
+                Grid {
+                    columns: 2
+                    spacing: 3
+
+                    Repeater {
+                        model: 4
+
+                        Rectangle {
+                            width: 5
+                            height: 5
+                            radius: 2.5
+                            color: Colors.barText
+                        }
+                    }
                 }
             }
 
@@ -214,6 +234,7 @@ PanelWindow {
                 bar: root
                 menuKey: "window"
                 enabled: WindowManager.hasWindow
+                visible: root.barSettings.menus
 
                 BarText {
                     text: "Pencere"
@@ -230,6 +251,7 @@ PanelWindow {
                 id: layoutTitle
                 bar: root
                 menuKey: "layout"
+                visible: root.barSettings.menus
 
                 BarText {
                     text: "Düzen"
@@ -243,8 +265,9 @@ PanelWindow {
             }
         }
 
-        // --- Sağ: macOS'taki sırayla, gruplar arasında biraz daha boşluk:
+        // --- Sağ: sıra ve görünenler Ayarlar → Üst bar'dan (Settings.barItems). Varsayılan macOS'taki gibi:
         //   tepsi | klavye dili | Bluetooth, ses, pil, Wi-Fi | arama, (mikrofon), kontrol merkezi | saat
+        // Farklı gruptan iki öğe yan yana gelince araya biraz boşluk girer.
         RowLayout {
             anchors {
                 right: parent.right
@@ -253,137 +276,224 @@ PanelWindow {
             }
             spacing: Metrics.barItemSpacing
 
-            Tray {
-                bar: root
-                Layout.rightMargin: implicitWidth > 0 ? Metrics.barGroupGap : 0 // simge yoksa boşluk da olmasın
-            }
+            Repeater {
+                model: root.rightItems
 
-            // Klavye dili
-            BarItem {
-                Layout.rightMargin: Metrics.barGroupGap
+                delegate: Loader {
+                    required property var modelData
+                    required property int index
 
-                BarText {
-                    text: KeyboardLayout.code
-                    font.pixelSize: Typography.small
-                    font.weight: Font.DemiBold
-                    font.letterSpacing: 0.4
+                    visible: root.available(modelData.id)
+                    Layout.rightMargin: root.gapAfter(index)
+                    sourceComponent: ({
+                            tray: trayItem,
+                            keyboard: keyboardItem,
+                            bluetooth: bluetoothItem,
+                            sound: soundItem,
+                            battery: batteryItem,
+                            wifi: wifiItem,
+                            search: searchItem,
+                            controlcenter: controlCenterItem,
+                            clock: clockItem
+                        })[modelData.id] ?? null
                 }
             }
+        }
+    }
 
-            // Bluetooth: bağlıyken simgesi değişir; tıklayınca cihaz listesi
-            BarItem {
-                active: root.openMenu === controlCenter.menuKey && controlCenter.rootPage === "bluetooth"
-                onClicked: root.toggleControlCenter("bluetooth")
+    // ---------- Sağdaki öğelerin sırası ----------
+    // Gizlenenler (Ayarlar) modelde yok; donanımı olmayanlar (pil) ve boş tepsi görünmez
+    readonly property var rightItems: Settings.barItems.filter(item => item.shown)
 
-                Icon {
-                    name: BluetoothStatus.icon
-                    size: Metrics.barIconSize
-                    strokeWidth: Metrics.barIconStroke
-                    color: BluetoothStatus.enabled ? Colors.barText : Colors.barTextMuted
-                }
+    function available(id) {
+        if (id === "battery")
+            return BatteryStatus.present;
+        if (id === "tray")
+            return SystemTray.items.values.some(item => item.status !== Status.Passive);
+        return true;
+    }
+
+    // Kendisinden sonra görünen ilk öğe başka gruptansa araya boşluk
+    function gapAfter(index) {
+        const items = rightItems;
+        if (!available(items[index]?.id ?? ""))
+            return 0;
+        for (let i = index + 1; i < items.length; i++) {
+            if (!available(items[i].id))
+                continue;
+            const group = id => Settings.barItemInfo[id]?.group ?? id;
+            return group(items[i].id) !== group(items[index].id) ? Metrics.barGroupGap : 0;
+        }
+        return 0;
+    }
+
+    // Saat: "Sal 17 Kas  18:40" (Ayarlar → Üst bar → gün, tarih, saniye)
+    readonly property var barSettings: Settings.s.bar
+    readonly property string clockFormat: {
+        const parts = [];
+        if (barSettings.weekday)
+            parts.push("ddd");
+        if (barSettings.date)
+            parts.push("d MMM");
+        const day = parts.join(" ");
+        const time = barSettings.seconds ? "HH:mm:ss" : "HH:mm";
+        return day === "" ? time : day + "  " + time;
+    }
+
+    Component {
+        id: trayItem
+        Tray {
+            bar: root
+        }
+    }
+
+    // Klavye dili
+    Component {
+        id: keyboardItem
+        BarItem {
+            BarText {
+                text: KeyboardLayout.code
+                font.pixelSize: Typography.small
+                font.weight: Font.DemiBold
+                font.letterSpacing: 0.4
             }
+        }
+    }
 
-            // Ses: tekerlekle düzey değişir; tıklayınca ayrıntılı ses menüsü
-            BarItem {
-                active: root.openMenu === controlCenter.menuKey && controlCenter.rootPage === "sound"
-                onClicked: root.toggleControlCenter("sound")
-                onScrolled: steps => AudioStatus.changeVolume(steps * 0.05)
+    // Bluetooth: bağlıyken simgesi değişir; tıklayınca cihaz listesi
+    Component {
+        id: bluetoothItem
+        BarItem {
+            active: root.openMenu === controlCenter.menuKey && controlCenter.rootPage === "bluetooth"
+            onClicked: root.toggleControlCenter("bluetooth")
 
-                Icon {
-                    name: AudioStatus.icon
-                    size: Metrics.barIconSize
-                    strokeWidth: Metrics.barIconStroke
-                    color: Colors.barText
-                }
+            Icon {
+                name: BluetoothStatus.icon
+                size: Metrics.barIconSize
+                strokeWidth: Metrics.barIconStroke
+                color: BluetoothStatus.enabled ? Colors.barText : Colors.barTextMuted
             }
+        }
+    }
 
-            // Pil: yüzde ve simge
-            BarItem {
-                visible: BatteryStatus.present
-                active: root.openMenu === controlCenter.menuKey && controlCenter.rootPage === "battery"
-                onClicked: root.toggleControlCenter("battery")
+    // Ses: tekerlekle düzey değişir; tıklayınca ayrıntılı ses menüsü
+    Component {
+        id: soundItem
+        BarItem {
+            active: root.openMenu === controlCenter.menuKey && controlCenter.rootPage === "sound"
+            onClicked: root.toggleControlCenter("sound")
+            onScrolled: steps => AudioStatus.changeVolume(steps * 0.05)
 
-                BarText {
-                    text: Math.round(BatteryStatus.level * 100) + "%"
-                    font.pixelSize: Typography.small + 1
-                }
-                BatteryIcon {
-                    level: BatteryStatus.level
-                    charging: BatteryStatus.charging
-                    color: Colors.barText
-                    accentColor: Colors.barAccent
-                    warningColor: Colors.barWarning
-                }
+            Icon {
+                name: AudioStatus.icon
+                size: Metrics.barIconSize
+                strokeWidth: Metrics.barIconStroke
+                color: Colors.barText
             }
+        }
+    }
 
-            // Wi-Fi (kablo bağlıysa ağ simgesi); tıklayınca Wi-Fi listesi
-            BarItem {
-                Layout.rightMargin: Metrics.barGroupGap
-                active: root.openMenu === controlCenter.menuKey && controlCenter.rootPage === "wifi"
-                onClicked: root.toggleControlCenter("wifi")
+    // Pil: yüzde (Ayarlar'dan gizlenebilir) ve simge
+    Component {
+        id: batteryItem
+        BarItem {
+            active: root.openMenu === controlCenter.menuKey && controlCenter.rootPage === "battery"
+            onClicked: root.toggleControlCenter("battery")
 
-                WifiIcon {
-                    visible: NetworkStatus.kind === "wifi"
-                    strength: NetworkStatus.strength
-                    size: Metrics.barIconSize
-                    strokeWidth: Metrics.barIconStroke
-                    color: Colors.barText
-                }
-                Icon {
-                    visible: NetworkStatus.kind !== "wifi"
-                    name: NetworkStatus.kind
-                    size: Metrics.barIconSize
-                    strokeWidth: Metrics.barIconStroke
-                    color: NetworkStatus.kind === "wifi-off" ? Colors.barTextMuted : Colors.barText
-                }
+            BarText {
+                visible: root.barSettings.batteryPercent
+                text: Math.round(BatteryStatus.level * 100) + "%"
+                font.pixelSize: Typography.small + 1
             }
-
-            // Arama
-            BarItem {
-                onClicked: Ui.searchRequested()
-
-                Icon {
-                    name: "search"
-                    size: Metrics.barIconSize - 1
-                    strokeWidth: Metrics.barIconStroke + 0.2
-                    color: Colors.barText
-                }
+            BatteryIcon {
+                level: BatteryStatus.level
+                charging: BatteryStatus.charging
+                color: Colors.barText
+                accentColor: Colors.barAccent
+                warningColor: Colors.barWarning
             }
+        }
+    }
 
-            // Kontrol merkezi; mikrofon kullanılıyorsa yanında turuncu nokta (macOS'taki gibi)
-            BarItem {
-                Layout.rightMargin: Metrics.barGroupGap
-                active: root.openMenu === controlCenter.menuKey && controlCenter.rootPage === "main"
-                onClicked: root.toggleControlCenter("main")
+    // Wi-Fi (kablo bağlıysa ağ simgesi); tıklayınca Wi-Fi listesi
+    Component {
+        id: wifiItem
+        BarItem {
+            active: root.openMenu === controlCenter.menuKey && controlCenter.rootPage === "wifi"
+            onClicked: root.toggleControlCenter("wifi")
 
-                Rectangle {
-                    visible: AudioStatus.micInUse
-                    implicitWidth: 6
-                    implicitHeight: 6
-                    radius: 3
-                    color: Colors.barWarning
-                }
-                ControlCenterIcon {
-                    color: Colors.barText
-                }
+            WifiIcon {
+                visible: NetworkStatus.kind === "wifi"
+                strength: NetworkStatus.strength
+                size: Metrics.barIconSize
+                strokeWidth: Metrics.barIconStroke
+                color: Colors.barText
             }
+            Icon {
+                visible: NetworkStatus.kind !== "wifi"
+                name: NetworkStatus.kind
+                size: Metrics.barIconSize
+                strokeWidth: Metrics.barIconStroke
+                color: NetworkStatus.kind === "wifi-off" ? Colors.barTextMuted : Colors.barText
+            }
+        }
+    }
 
-            // Tarih ve saat ("Sal 17 Kas  18:40"); tıklayınca bildirim merkezi.
-            // Rahatsız etme açıkken başında ay.
-            BarItem {
-                active: root.openMenu === notificationCenter.menuKey
-                onClicked: root.toggleMenu(notificationCenter.menuKey)
+    // Arama
+    Component {
+        id: searchItem
+        BarItem {
+            onClicked: Ui.searchRequested()
 
-                Icon {
-                    visible: QuickSettings.doNotDisturb
-                    name: "moon"
-                    size: Metrics.barIconSize - 2
-                    strokeWidth: Metrics.barIconStroke + 0.2
-                    color: Colors.barText
-                }
-                BarText {
-                    text: clock.date.toLocaleString(Qt.locale("tr_TR"), "ddd d MMM  HH:mm")
-                }
+            Icon {
+                name: "search"
+                size: Metrics.barIconSize - 1
+                strokeWidth: Metrics.barIconStroke + 0.2
+                color: Colors.barText
+            }
+        }
+    }
+
+    // Kontrol merkezi; mikrofon kullanılıyorsa yanında turuncu nokta (macOS'taki gibi)
+    Component {
+        id: controlCenterItem
+        BarItem {
+            active: root.openMenu === controlCenter.menuKey && controlCenter.rootPage === "main"
+            onClicked: root.toggleControlCenter("main")
+
+            Rectangle {
+                visible: AudioStatus.micInUse
+                implicitWidth: 6
+                implicitHeight: 6
+                radius: 3
+                color: Colors.barWarning
+            }
+            ControlCenterIcon {
+                color: Colors.barText
+            }
+        }
+    }
+
+    // Tarih ve saat; tıklayınca bildirim merkezi. Rahatsız etme açıkken başında ay.
+    Component {
+        id: clockItem
+        BarItem {
+            active: root.openMenu === notificationCenter.menuKey
+            onClicked: root.toggleMenu(notificationCenter.menuKey)
+
+            Icon {
+                visible: QuickSettings.doNotDisturb
+                name: "moon"
+                size: Metrics.barIconSize - 2
+                strokeWidth: Metrics.barIconStroke + 0.2
+                color: Colors.barText
+            }
+            BarText {
+                text: clock.date.toLocaleString(Qt.locale("tr_TR"), root.clockFormat)
+                // Saniye görünürken rakamlar eşit genişlikte (saat titremesin)
+                font.features: root.barSettings.seconds ? {
+                    "tnum": 1
+                } : {}
             }
         }
     }

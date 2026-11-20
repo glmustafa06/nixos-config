@@ -314,6 +314,16 @@ ColumnLayout {
                 Ui.wallpaperRequested();
             }
         }
+        // Ayarlar penceresi
+        CircleButton {
+            icon: "settings"
+            size: 32
+            iconSize: 16
+            onClicked: {
+                root.center.close();
+                Ui.openSettings("");
+            }
+        }
         CircleButton {
             icon: "power"
             size: 32

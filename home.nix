@@ -42,6 +42,7 @@ in
 
     # --- Uygulamalar
     inputs.zen-browser.packages.${pkgs.stdenv.hostPlatform.system}.default
+    firefox
     kitty
     kdePackages.dolphin
     kdePackages.kio-extras
@@ -54,9 +55,11 @@ in
     spotify
     onlyoffice-desktopeditors
     pavucontrol
+    vlc
 
     # --- Terminal araçları
     neovim
+    vim
     btop
     fastfetch
     ripgrep

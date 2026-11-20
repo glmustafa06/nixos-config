@@ -19,6 +19,8 @@ Item {
     readonly property alias shape: shape
 
     readonly property bool music: Media.active
+    // Ekran kaydı sürüyor ya da ekran görüntüsü için geri sayım: solda kırmızı nokta ve süre
+    readonly property bool capture: Screenshot.recording || Screenshot.phase === "countdown"
     property bool expanded: false
 
     // Bildirim: adada gösterilen (Notifications.current). Müziğin önüne geçer.
@@ -29,7 +31,7 @@ Item {
     onNoticeChanged: replying = false
 
     // Şeklin gideceği ölçüler; oraya yay hareketiyle varır
-    property real shapeWidth: notifying ? Metrics.islandNoticeWidth : expanded ? Metrics.islandExpandedWidth : music ? Metrics.islandMusicWidth : Metrics.islandWidth
+    property real shapeWidth: notifying ? Metrics.islandNoticeWidth : expanded ? Metrics.islandExpandedWidth : music || capture ? Metrics.islandMusicWidth : Metrics.islandWidth
     property real shapeHeight: notifying ? Metrics.islandNoticeHeight + (replying ? Metrics.islandReplyHeight : 0) : expanded ? Metrics.islandExpandedHeight : Metrics.islandHeight
     property real shapeRadius: notifying || expanded ? Metrics.islandExpandedRadius : Metrics.islandRadius
 
@@ -192,14 +194,14 @@ Item {
             opacity: Math.max(0, 1 - root.progress * 4)
             visible: opacity > 0
 
-            // Müzik: solda küçük kapak
+            // Müzik: solda küçük kapak (kayıt sürerken yerinde kayıt göstergesi)
             AlbumArt {
                 anchors {
                     left: parent.left
                     leftMargin: 8
                     verticalCenter: parent.verticalCenter
                 }
-                visible: root.music
+                visible: root.music && !root.capture
                 size: 20
                 source: Media.artUrl
 
@@ -208,6 +210,81 @@ Item {
                         if (hovered)
                             root.expandNow();
                     }
+                }
+            }
+
+            // Kayıt: kırmızı nokta ve süre; tıklayınca durur. Geri sayımda: kamera ve kalan saniye.
+            Rectangle {
+                id: captureChip
+
+                anchors {
+                    left: parent.left
+                    leftMargin: 6
+                    verticalCenter: parent.verticalCenter
+                }
+                visible: root.capture
+                width: captureRow.implicitWidth + 16
+                height: 22
+                radius: 11
+                color: captureMouse.containsMouse ? Colors.islandButtonHover : "transparent"
+
+                Row {
+                    id: captureRow
+                    anchors.centerIn: parent
+                    spacing: 6
+
+                    Rectangle {
+                        visible: Screenshot.recording
+                        anchors.verticalCenter: parent.verticalCenter
+                        width: 8
+                        height: 8
+                        radius: 4
+                        color: Colors.recordDot
+
+                        // Yavaşça yanıp söner
+                        SequentialAnimation on opacity {
+                            running: Screenshot.recording
+                            loops: Animation.Infinite
+                            NumberAnimation {
+                                to: 0.35
+                                duration: 900
+                                easing.type: Easing.InOutSine
+                            }
+                            NumberAnimation {
+                                to: 1
+                                duration: 900
+                                easing.type: Easing.InOutSine
+                            }
+                        }
+                    }
+                    Icon {
+                        visible: !Screenshot.recording
+                        anchors.verticalCenter: parent.verticalCenter
+                        name: "timer"
+                        size: 13
+                        strokeWidth: 2.3
+                        color: Colors.islandText
+                    }
+                    Text {
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: Screenshot.recording ? Media.formatTime(Screenshot.elapsed) : Screenshot.countdown
+                        color: Colors.islandText
+                        font.family: Typography.family
+                        font.pixelSize: Typography.small
+                        font.weight: Font.DemiBold
+                        font.features: {
+                            "tnum": 1
+                        }
+                    }
+                }
+
+                MouseArea {
+                    id: captureMouse
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    // Kayıtta durdurur, geri sayımda vazgeçer
+                    onClicked: Screenshot.recording ? Screenshot.stopRecording() : Screenshot.cancel()
                 }
             }
 

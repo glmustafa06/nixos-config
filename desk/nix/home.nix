@@ -24,11 +24,15 @@ let
     wl-clipboard
     grim # ekran görüntüsü
     slurp
+    satty # ekran görüntüsünü düzenleme (ok, yazı, bulanıklaştırma)
+    gpu-screen-recorder # ekran kaydı (ekran kartında kodlar; izni nixos.nix verir)
+    wf-recorder # ekran kaydının yedeği (gpu-screen-recorder başlayamazsa)
     brightnessctl
     playerctl
     libnotify # notify-send
     xdg-utils # xdg-open: dock'taki İndirilenler, aramadaki dosyalar
     fd # aramada dosyalar
+    glib # gio trash: dock'taki çöp kutusuna bırakılan dosyalar
     hyprsunset # gece ışığı
     hypridle
   ];
@@ -37,14 +41,29 @@ let
   # servislerin içinde; profile konmaz (home.nix'teki python3'le çakışmasın).
   agentPython = pkgs.python3.withPackages (ps: [ ps.dbus-next ]);
 
+  # Ayarlar penceresinin dosyası: desk'in klasörünün yanında (~/nixos-config/desk-ayarlar.json),
+  # git'te durur. desk (settings/Settings.qml) ve betikler DESK_SETTINGS'ten okur.
+  settingsFile = "${dirOf cfg.source}/desk-ayarlar.json";
+
   withRuntime = name: command: pkgs.writeShellScript name ''
     export PATH=${lib.makeBinPath runtime}:$PATH
     export DESK_PYTHON=${agentPython}/bin/python3
+    export DESK_SETTINGS=${lib.escapeShellArg settingsFile}
     exec ${command}
   '';
 
+  # hypridle: Ayarlar'daki süreler desk'in yazdığı dosyada (services/PowerSettings.qml);
+  # o dosya yoksa (desk hiç açılmadıysa) ~/.config/hypr/hypridle.conf
+  hypridleStart = pkgs.writeShellScript "desk-hypridle-start" ''
+    config="''${XDG_STATE_HOME:-$HOME/.local/state}/desk/hypridle.conf"
+    if [ -s "$config" ]; then
+      exec hypridle -c "$config"
+    fi
+    exec hypridle
+  '';
+
   # Grafik oturumla başlayıp biten, çökünce kendini yeniden açan servis
-  sessionService = description: command: {
+  sessionService = name: description: command: {
     Unit = {
       Description = description;
       PartOf = [ "graphical-session.target" ];
@@ -52,7 +71,7 @@ let
       ConditionEnvironment = "WAYLAND_DISPLAY";
     };
     Service = {
-      ExecStart = "${withRuntime "desk-${lib.head (lib.splitString " " command)}" command}";
+      ExecStart = "${withRuntime "desk-${name}" command}";
       Restart = "on-failure";
       RestartSec = 2;
       # Yeniden başlarken yalnızca kendisi kapanır; açtıkları (kilit ekranı, uwsm'siz açılan
@@ -99,11 +118,24 @@ in
     };
 
     # Günlük: journalctl --user -u desk -f      Yeniden başlat: systemctl --user restart desk
-    systemd.user.services.desk = sessionService "desk: bar, dock, bildirimler, arama" "qs -c desk";
+    systemd.user.services.desk = sessionService "qs" "desk: bar, dock, bildirimler, arama" "qs -c desk";
 
-    # Boşta karartma, kilit, uyku (~/.config/hypr/hypridle.conf). Kilidi bu açar; çökerse kilit
+    # Boşta karartma, kilit, uyku (süreler Ayarlar → Pil ve güç'te). Kilidi bu açar; çökerse kilit
     # ekranı açık kalır, hypridle birkaç saniyede geri gelir.
-    systemd.user.services.hypridle = sessionService "hypridle: boşta karartma, kilit, uyku" "hypridle";
+    systemd.user.services.hypridle = sessionService "hypridle" "hypridle: boşta karartma, kilit, uyku" "${hypridleStart}";
+
+    # Aramada "Ayarlar" (Super+Virgül de açar). desk'in penceresinin kimliği de bu: dock ve bar
+    # onu "Ayarlar" adıyla ve bu simgeyle gösterir (shell.qml → AppId).
+    xdg.desktopEntries.desk-settings = {
+      name = "Ayarlar";
+      genericName = "desk ayarları";
+      comment = "Görünüm, bar, dock, bildirimler, güç, klavye";
+      icon = "preferences-system";
+      exec = "qs ipc -c desk call settings show";
+      terminal = false;
+      categories = [ "Settings" ];
+      settings.Keywords = "settings;preferences;tercihler;ayarlar;desk;";
+    };
 
     # İlk kurulum (her updatenix'te; yalnızca eksik olanı tamamlar, kendi anahtarları dışında bir şeye
     # dokunmaz). Dolphin açıksa dolphin_setup.py kendini atlar; bir sonraki updatenix'te yapar.
@@ -111,6 +143,7 @@ in
       desk=${lib.escapeShellArg cfg.source}
       if [ -d "$desk/scripts" ]; then
         export PATH=${lib.makeBinPath (with pkgs; [ python3 procps coreutils gnugrep imagemagick ])}:$PATH
+        export DESK_SETTINGS=${lib.escapeShellArg settingsFile}
         kitty=${lib.escapeShellArg "${config.xdg.configHome}/kitty/kitty.conf"}
         if ! grep -qx 'include desk-colors.conf' "$kitty" 2>/dev/null; then
           run mkdir -p "$(dirname "$kitty")"

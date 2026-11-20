@@ -1,7 +1,10 @@
 //@ pragma IconTheme Colloid-Dark
+//@ pragma AppId desk-settings
 // desk — giriş noktası
 // Uygulama simgeleri Colloid temasından (home.nix → colloid-icon-theme). Tema kurulu değilse
 // simgeler boş görünür; o zaman yukarıdaki satırı silmek Qt'nin ayarındaki temaya döner.
+// AppId: desk'in tek normal penceresi Ayarlar; Hyprland, dock ve bar onu bu kimlikle tanır
+// (nix/home.nix → desk-settings.desktop: "Ayarlar" adı ve simgesi; hypr/config/rules.lua).
 import QtQuick
 import Quickshell
 import Quickshell.Io
@@ -10,13 +13,28 @@ import qs.modules.osd
 import qs.modules.dock
 import qs.modules.search
 import qs.modules.wallpaper
+import qs.modules.screenshot
+import qs.modules.switcher
+import qs.modules.settings
 import qs.services
 
 ShellRoot {
-    // Pilde hafif görünüm: Hyprland'e söyler (services/Theming.qml)
-    Component.onCompleted: Theming.start()
+    // Ayarları Hyprland'e verir, pilde hafif görünüme geçer (services/Theming.qml); boşta kalma,
+    // kapak ve pil koruma ayarlarını sisteme yazar (services/PowerSettings.qml)
+    Component.onCompleted: {
+        Theming.start();
+        PowerSettings.start();
+    }
 
-    // Her ekrana duvar kâğıdı, bar, dock, arama, duvar kâğıdı seçici ve ses/parlaklık göstergesi
+    // Ayarlar penceresi: yalnızca açıkken var
+    LazyLoader {
+        active: Ui.settingsOpen
+
+        SettingsWindow {}
+    }
+
+    // Her ekrana duvar kâğıdı, bar, dock, arama, duvar kâğıdı seçici, ses/parlaklık göstergesi,
+    // ekran görüntüsü seçimi ve önizlemesi, pencere değiştirici
     Variants {
         model: Quickshell.screens
 
@@ -40,6 +58,15 @@ ShellRoot {
                 modelData: perScreen.modelData
             }
             Osd {
+                modelData: perScreen.modelData
+            }
+            ScreenshotOverlay {
+                modelData: perScreen.modelData
+            }
+            ShotPreview {
+                modelData: perScreen.modelData
+            }
+            WindowSwitcher {
                 modelData: perScreen.modelData
             }
         }
@@ -96,6 +123,62 @@ ShellRoot {
         // Rahatsız etme: aç/kapa
         function dnd(): void {
             QuickSettings.setDoNotDisturb(!QuickSettings.doNotDisturb);
+        }
+    }
+
+    // Print: qs ipc -c desk call screenshot start (kayıt sürüyorsa durdurur)
+    // Shift+Print: … screenshot screen
+    IpcHandler {
+        target: "screenshot"
+
+        function start(): void {
+            Screenshot.start("");
+        }
+        function screen(): void {
+            Screenshot.captureScreen();
+        }
+        function record(): void {
+            Screenshot.start("record");
+        }
+        function stop(): void {
+            Screenshot.stopRecording();
+        }
+    }
+
+    // Alt+Tab (keybinds.lua): next ve "switcher" tuş takımı; orada Shift+Tab previous, Alt'ı bırakmak
+    // commit, Esc cancel
+    IpcHandler {
+        target: "switcher"
+
+        function next(): void {
+            Switcher.next();
+        }
+        function previous(): void {
+            Switcher.previous();
+        }
+        function commit(): void {
+            Switcher.commit();
+        }
+        function cancel(): void {
+            Switcher.cancel();
+        }
+    }
+
+    // Super+Virgül: qs ipc -c desk call settings toggle
+    // Aramadaki "Ayarlar" (desk-settings.desktop): … settings show
+    IpcHandler {
+        target: "settings"
+
+        function toggle(): void {
+            Ui.toggleSettings();
+        }
+        function show(): void {
+            Ui.openSettings("");
+        }
+        // page: appearance, windows, bar, dock, notifications, display, power, input, screenshot,
+        // shortcuts, about
+        function open(page: string): void {
+            Ui.openSettings(page);
         }
     }
 

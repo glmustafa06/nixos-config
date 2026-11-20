@@ -21,6 +21,21 @@ Singleton {
         Commands.open(["dolphin", "trash:/"]);
     }
 
+    // Dosyaları çöpe taşır (dock'taki çöp kutusuna bırakılınca). gio, freedesktop kuralıyla taşır:
+    // Dolphin'in çöp kutusunda görünür, oradan geri yüklenebilir. Başka diskteki dosyalar o diskin
+    // kendi çöp klasörüne gider.
+    function trashFiles(paths) {
+        if (paths.length === 0)
+            return;
+        Commands.run(["gio", "trash", "--"].concat(paths), (code, out, err) => {
+            root.refresh();
+            if (code !== 0) {
+                const count = paths.length === 1 ? paths[0].split("/").pop() : `${paths.length} öğe`;
+                Notifications.notify("Çöp kutusu", `${count} çöpe taşınamadı`, err.trim().split("\n").pop() || "gio trash çalışmadı.", "trash-2", 1, null, "trash");
+            }
+        });
+    }
+
     // Kalıcı olarak siler (geri alınamaz; dock'ta onay alt menüsünden sonra çağrılır)
     function empty() {
         Commands.run(["sh", "-c", 'T="$1"; for d in files info expunged; do [ -d "$T/$d" ] && find "$T/$d" -mindepth 1 -delete; done; rm -f "$T/directorysizes"', "sh", dir], () => root.refresh());

@@ -127,7 +127,13 @@ def read_colors(path=COLORS_QML):
     def rgba(r, g, b, a=1.0):
         return (float(r), float(g), float(b), float(a))
 
-    env = {"__builtins__": {}, "max": max, "min": min, "rgba": rgba}
+    # Ayarlara bağlı değerler (Settings.reduceTransparency gibi) varsayılanlarıyla hesaplanır:
+    # ayar kapalıyken (0, false) en saydam, yani en zor durum
+    class _Settings:
+        def __getattr__(self, name):
+            return False
+
+    env = {"__builtins__": {}, "max": max, "min": min, "rgba": rgba, "Settings": _Settings()}
     for line in Path(path).read_text().splitlines():
         match = _PROPERTY.match(line)
         if not match:

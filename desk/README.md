@@ -11,7 +11,8 @@ desk `~/nixos-config/desk`'te durur ve Nix modülleriyle kurulur (`nix/`):
   servisleri, ilk kurulum (kitty.conf'a `include`, `scripts/apps_theme.py`, `scripts/dolphin_setup.py`; her
   updatenix'te eksik olanı tamamlar).
 - `nix/nixos.nix` (`flake.nix` → modules, `configuration.nix`'te `desk.enable = true`): kilit ekranının şifre
-  denetimi (PAM), giriş ekranı teması ve `/var/lib/desk`, pil (upower), güç modu, yazı tipleri (Inter, JetBrains Mono).
+  denetimi (PAM), giriş ekranı teması ve `/var/lib/desk`, pil (upower), pil korumanın yazma izni (udev), güç modu,
+  ekran kaydı izni, yazı tipleri (Inter, JetBrains Mono).
 
 desk grafik oturumla başlayan bir servis; çökerse 2 sn sonra kendini açar. Kod Nix deposuna kopyalanmaz:
 bir `.qml` dosyasını kaydettiğin an desk kendini yeniler.
@@ -52,11 +53,53 @@ Pencerelerde kenarlık yok; odaktaki pencere, ötekiler hafifçe karardığı i�
 Yüzeyler sabit (Grafit). Duvar kâğıdı Super+W ile seçilince betik kendiliğinden çalışır; elle çalıştırmak
 yalnızca başka yoldan değiştirince gerekir.
 
+## Ayarlar
+
+Super+Virgül, kontrol merkezindeki çark, uygulama menüsündeki "Ayarlar…" ya da aramada "Ayarlar" açar
+(ayrı bir pencere; Esc kapatır). Her değişiklik anında uygulanır ve `~/nixos-config/desk-ayarlar.json`'a yazılır:
+git'le saklanır, başka bilgisayara taşınır. Dosyada yalnızca varsayılandan farklı olanlar durur; elle de
+değiştirilebilir, desk hemen görür (bozuk dosyada varsayılanlarla devam eder).
+
+| Bölüm | Neler var |
+|---|---|
+| Görünüm | vurgu rengi (duvar kâğıdından ya da sabit; kitty ve Dolphin de geçer), saydamlığı azalt, hareketi azalt, duvar kâğıdı |
+| Pencereler | pencereler arası ve kenar boşluğu, köşe yuvarlaklığı, gölge, odakta olmayanları karartma |
+| Üst bar | sağdaki simgelerin sırası (sürükle) ve görünürlüğü, saat (gün, tarih, saniye), pil yüzdesi, Pencere/Düzen menüleri, barın görünümü (otomatik, koyu, açık) |
+| Dock | simge boyu, gizlenme (akıllı, hep gizli, hep görünür), İndirilenler ve çöp, rozetler, noktalar, sabitlenenler |
+| Bildirimler | adada kalma süresi, rahatsız etme ve zamanlaması, uygulama başına adada gösterme, takvimde varsayılan hatırlatma |
+| Ekran | parlaklık, gece ışığı (sıcaklık, zamanlama), ekranların bilgisi |
+| Pil ve güç | pil durumu ve sağlığı, pil koruma, güç modu, pilde hafif görünüm, boşta karartma/kilit/uyku (pilde ve prizde), kapak |
+| Klavye ve fare | klavye düzenleri ve geçiş tuşu, tuş tekrarı, işaretçi hızı, odak fareyi izlesin, dokunmatik yüzey |
+| Ekran görüntüsü | köşedeki önizleme süresi, kayıtta kare hızı, imleç, ses |
+| Kısayollar | Hyprland'deki açıklamalı kısayollar (`hyprctl binds -j`; açıklamalar `keybinds.lua`'da) |
+| Hakkında | bilgisayar, sistem ve sürümler, ayarlar dosyası, sıfırlama |
+
+Nasıl uygulanır:
+
+- desk'in kendi ayarları (bar, dock, renkler…) bağlamayla anında değişir (`settings/Settings.qml`, her yerde `Settings.s.…`).
+- Hyprland'inkiler (boşluk, köşe, gölge, karartma, animasyonlar, klavye, fare): `services/Theming.qml` →
+  `hyprctl eval 'desk.apply_settings({…})'` (`hypr/config/desk.lua`); `hyprctl reload`'dan sonra yeniden verilir.
+  Dosyadaki değerler (`appearance.lua`, `input.lua`) desk açılana kadar geçerli.
+- Boşta kalma süreleri: `services/PowerSettings.qml` → `~/.local/state/desk/hypridle.conf`; hypridle servisi bu dosyayla
+  başlar ve süre değişince yeniden başlatılır. Dosya yoksa `~/.config/hypr/hypridle.conf`.
+- Kapak: `~/.local/state/desk/lid.env` (`hypr/scripts/lid.sh` her kapanışta okur).
+- Pil koruma: `scripts/battery_care.sh` (Lenovo'da koruma modu, şarj ~%60'ta durur; ötekilerde %80 sınırı).
+  Yazma izni `nix/nixos.nix`'teki udev kuralından; ilk kurulumdan sonra bir kez yeniden başlatmak gerekir.
+
+Pencerenin kimliği `desk-settings` (`shell.qml` → `//@ pragma AppId`): dock ve bar onu "Ayarlar" adıyla ve simgesiyle
+gösterir (`desk-settings.desktop`), Hyprland ortada yüzer açar (`rules.lua`).
+
+```
+qs ipc -c desk call settings toggle
+qs ipc -c desk call settings open dock     # bölümle: appearance, windows, bar, dock, notifications, display, power, input, screenshot, shortcuts, about
+```
+
 ## Bar
 
-- Solda logo, uygulamanın adı ve menüleri; ortada ada (çalışma alanı noktaları, düzen simgesi — adı üstüne gelince
+- Solda dört nokta (tıklayınca arama), uygulamanın adı ve menüleri; ortada ada (çalışma alanı noktaları, düzen simgesi — adı üstüne gelince
   açılır —, çalarken kapak ve dalga); sağda macOS'taki sırayla, gruplar arasında biraz boşlukla:
   tepsi · klavye dili · Bluetooth, ses, pil, Wi-Fi · arama, kontrol merkezi · tarih ve saat.
+  Sağdakilerin sırası ve hangilerinin görüneceği Ayarlar → Üst bar'da (kontrol merkezi ve saat hep görünür).
 - Bardaki simgeler tek renk ve aynı kalınlıkta (`Metrics.barIconSize`, `barIconStroke`). Tepsi simgeleri gri tonlu;
   üstüne gelince ya da menüsü açıkken kendi renkleri. Mikrofon kullanılıyorsa kontrol merkezi simgesinin yanında
   turuncu nokta.
@@ -71,12 +114,32 @@ yalnızca başka yoldan değiştirince gerekir.
 - Bu alandaki bir pencere dock'un yerine girince gizlenir; fare ekranın alt kenarına gelince çıkar.
 - Sağ tık menüsü ve ad etiketi dock'un kendi penceresinde çizilir (ayrı pencerede menüye tıklanamıyordu, plan: Sorun 62).
 - Açık uygulamaların altında nokta; odaktaki uygulamanınki vurgu renginde kısa bir hap. Altında yumuşak bir gölge.
+- **Sıralama:** sabitlenen bir simgeyi sürükle; ötekiler kayarak yer açar, bırakınca sıra kaydedilir. Açık ama
+  sabitlenmemiş bir uygulamayı sabitlenenlerin arasına sürüklersen sabitlenir. Dock'un çok üstünde bırakırsan
+  vazgeçilir (simge soluklaşır, yerine döner).
+- **Rozet:** uygulamanın görmediğin bildirimlerinin sayısı simgenin köşesinde kırmızı. Bildirim gelirken o uygulama
+  odaktaysa sayılmaz; uygulamaya geçince sıfırlanır; merkezden silinen bildirim sayıdan düşer.
+- **Dosya bırakma:** Dolphin'den bir dosyayı uygulamanın simgesine bırak, onunla açılır (yalnızca dosya açabilen
+  uygulamalar vurgulanır; uwsm `%f`/`%U` alanlarını kendisi doldurur). Çöp kutusuna bırakırsan çöpe taşınır
+  (`gio trash`; Dolphin'in çöp kutusundan geri yüklenir). Kaynak dosyaya dokunulmaz (kopyala eylemi). Dock
+  gizliyse dosyayı ekranın alt kenarına getir, çıkar.
 - Uygulama simgeleri Colloid temasından (`shell.qml` → `//@ pragma IconTheme Colloid-Dark`;
   NixOS'ta `home.nix` → `colloid-icon-theme`).
 
+## Pencere değiştirici
+
+**Alt+Tab** (macOS'taki gibi): Alt basılıyken ekranın ortasında açık pencerelerin uygulama simgeleri çıkar, son
+kullanılan başta. Tab ilerler, Shift+Tab geri gider, Alt'ı bırakınca seçilen pencereye geçilir (başka alandaysa o
+alana). Esc vazgeçer. Fareyle üstüne gelmek seçer, tıklamak geçer. Başka alandaki pencerenin köşesinde alan numarası
+var; seçilenin altında uygulamanın adı ve pencerenin başlığı.
+
+Hızlı bir Alt+Tab değiştiriciyi göstermeden bir önceki pencereye geçer. Hyprland tarafı `keybinds.lua`'da: Alt+Tab
+desk'e haber verir ve "switcher" tuş takımına girer; Alt'ı bırakmak ya da Esc oradan çıkarır. desk çalışmıyorsa
+Alt+Tab eskisi gibi sıradaki pencereye geçer (`services/Switcher.qml`, `modules/switcher`).
+
 ## Arama
 
-Super+Boşluk, bardaki logo ya da büyüteç açar.
+Super+Boşluk, bardaki dört nokta ya da büyüteç açar.
 
 - Uygulamalar, ayarlar ("wifi", "ses", "pil" kontrol merkezinin sayfasını açar) ve hızlı işlemler ("gece ışığı",
   "kilitle", "uyku", "güç modu", "düzen"). Yeniden başlatma ve kapatma onay isteyen güç sayfasını açar.
@@ -97,12 +160,25 @@ gibi başka bir bildirim programı çalışmamalı. Kontrol: `busctl --user stat
   1 saat adada göstermez (merkezde görünür; merkezde "Susturuldu · aç" ile geri açılır).
 - Acil bildirimler kapatılana kadar kalır ve rahatsız etme modunu deler. Rahatsız etme açıkken ya da tam ekran bir
   pencere odaktayken bildirimler adaya çıkmaz, doğrudan merkeze gider; barda saatin önünde ay görünür.
-- Bildirim merkezi: saate tıkla (ya da `qs ipc -c desk call notifications toggle`). Üstte ay takvimi,
-  altında uygulamaya göre gruplu bildirimler. Gruba tıklayınca açılır; tek bildirime tıklayınca uygulamaya gidilir.
-  Üstüne gelince çıkan × siler (kapalı grupta bütün grubu).
+- Bildirim merkezi: saate tıkla (ya da `qs ipc -c desk call notifications toggle`). Üstte ay takvimi ve seçili
+  günün etkinlikleri, altında uygulamaya göre gruplu bildirimler. Gruba tıklayınca açılır; tek bildirime tıklayınca
+  uygulamaya gidilir. Üstüne gelince çıkan × siler (kapalı grupta bütün grubu).
 - Geçmiş `~/.local/state/desk/notifications.json` dosyasında saklanır (son 50); ses yok.
 - Pil %20 ve %10'da uyarır (tıklayınca tasarruf modu), %5'te acil uyarır; şarja takınca uyarı adadan kalkar.
 - Rahatsız etme: kontrol merkezinden ya da `… call notifications dnd`.
+
+## Takvim
+
+Bildirim merkezindeki takvim (saate tıkla). Etkinlikler yalnızca bu bilgisayarda:
+`~/.local/state/desk/calendar.json` (`services/Events.qml`). Telefondaki takvimle bağı yok.
+
+- Bir güne tıkla: altında o günün etkinlikleri. Etkinliği olan günlerin altında nokta var.
+- **+** yeni etkinlik: ad, saat (boşsa tüm gün; `14:30`, `1430`, `9` gibi), tarih (`24.11.2026`, `24.11`),
+  tekrar (yok, her hafta, her ay, her yıl), hatırlatma (vaktinde, 10 dk, 1 sa, 1 gün önce; tüm gün etkinliğinde
+  o gün ya da bir gün önce 09:00). Enter kaydeder, Esc vazgeçer.
+- Etkinliğe tıkla: düzenle ya da sil. Tekrarlanan etkinlikte "Yalnızca bu gün" (o hafta yok) ya da "Hepsi".
+- Hatırlatma vakti gelince bildirim gelir ("Takvim"); tıklayınca takvim o günde açılır. desk kapalıyken kaçan
+  hatırlatma, etkinlik henüz bitmediyse açılınca gelir; geçmişe yazılan etkinlik hatırlatma göndermez.
 
 ## Kilit ekranı
 
@@ -148,10 +224,32 @@ Super+V aramayı pano geçmişiyle açar (kontrol merkezindeki "Pano" da). Kopya
 En çok 8 satır görünür, gerisi oklarla ve tekerlekle kayar. Resimlerin küçük hâli `$XDG_RUNTIME_DIR` içinde
 (bellekte; kapanınca silinir).
 
-## Ekran görüntüsü
+## Ekran görüntüsü ve kaydı
 
-Print: alan seç; Shift+Print: bütün ekran (`scripts/screenshot.sh`). Resim panoya kopyalanır ve
-Resimler/Ekran görüntüleri'ne kaydedilir; bildirimine tıklayınca açılır.
+**Print** ekranı dondurur ve seçim ekranını açar (`modules/screenshot`, `services/Screenshot.qml`). Açılır
+menüler de çekilebilir. Altta araç çubuğu:
+
+- **Görüntü / Kayıt** (kamera, video).
+- **Alan:** sürükleyerek seç, bırakınca çekilir (boyutu yanında yazar). **Pencere:** üstüne gelinen pencere
+  aydınlanır, tıklayınca çekilir; köşeleri saydam yuvarlatılır. **Ekran:** tıkla ya da Enter.
+- **Bekleme:** Hemen, 3 sn, 10 sn (geri sayım adada; menü açmaya vakit kalır, ekranın o anki hâli çekilir).
+- Kayıtta **Ses:** bilgisayarın sesi kayda girsin mi (mikrofon değil).
+- Klavye: Boşluk alan ↔ pencere, Enter bütün ekran, Esc vazgeç (ya da Print'e yeniden bas).
+
+**Shift+Print** bütün ekranı hemen çeker. desk çalışmıyorsa iki kısayol da eski betiğe döner (`scripts/screenshot.sh`,
+slurp ile alan).
+
+Görüntü Resimler/Ekran görüntüleri'ne kaydedilir ve panoya kopyalanır; sağ altta küçük önizleme çıkar:
+
+- Tıkla: **Satty**'de düzenle (ok, kutu, yazı, bulanıklaştırma, kırpma; renkler desk'inkiler). Enter kaydeder
+  (aynı dosyanın üstüne) ve kopyalar, Esc vazgeçer.
+- Üstüne gel: Düzenle, Klasörde göster, Sil (çöpe). Sürükleyip bir uygulamaya bırakılabilir.
+- 6 sn sonra kendiliğinden gider; fare üstündeyken bekler.
+
+**Kayıt** Videolar/Ekran kayıtları'na (mp4). Kayıt sürerken adada kırmızı nokta ve süre; noktaya tıkla ya da
+Print'e bas, durur. Kayıt `gpu-screen-recorder` ile ekran kartında kodlanır (pili az yorar; ekranı okuma izni
+`nix/nixos.nix` → `programs.gpu-screen-recorder`). Başlayamazsa `wf-recorder`'a geçer (işlemcide kodlar, ses yok).
+Aramada "Ekran görüntüsü" ve "Ekran kaydı" da var. Elle: `qs ipc -c desk call screenshot start|screen|record|stop`.
 
 ## Uygulamalar: kitty ve Dolphin
 
@@ -197,7 +295,7 @@ Cihaz bir şey isterse soru Bluetooth sayfasının üstünde çıkar (kontrol me
 ## Pilde
 
 Fiş çekilince (3 sn bekledikten sonra) ekran 60 Hz'e iner, bulanıklık tek geçişe düşer, animasyonlar %20 kısalır;
-takınca geri gelir. desk Hyprland'e söyler (`services/Theming.qml` → `hypr/config/desk.lua` → `desk.set_power`).
+takınca geri gelir (Ayarlar → Pil ve güç → "Pilde hafif görünüm" ile kapatılabilir). desk Hyprland'e söyler (`services/Theming.qml` → `hypr/config/desk.lua` → `desk.set_power`).
 Hz değişirken ekran bir an kararabilir.
 
 ## Tasarım kuralları
@@ -251,16 +349,20 @@ Barda `Colors.text` değil `Colors.barText`, `barTextMuted`, `barAccent` kullan�
 |---|---|
 | `shell.qml` | giriş noktası |
 | `theme/` | renkler, ölçüler, yazı tipleri (tek yerden yönetilir) |
-| `components/` | her yerde kullanılan parçalar (simgeler, logo, kapak resmi, dalga) |
+| `components/` | her yerde kullanılan parçalar (simgeler, kapak resmi, dalga, cam kenarı) |
 | `services/` | sistemden bilgi okuyan tekil nesneler (pil, ağ, ses, Hyprland, müzik) |
 | `modules/bar/` | üst bar, ada, uygulama / Pencere / Düzen menüleri, sistem tepsisi |
 | `modules/menu/` | açılır menü bileşeni (bar, tepsi ve ileride dock kullanır) |
 | `modules/controlcenter/` | kontrol merkezi: Wi-Fi, Bluetooth, güç modu, sürgüler, müzik, güç |
 | `modules/osd/` | ses ve parlaklık göstergesi |
-| `modules/dock/` | dock: uygulamalar, İndirilenler, çöp kutusu, akıllı gizleme |
+| `modules/dock/` | dock: uygulamalar, İndirilenler, çöp kutusu, akıllı gizleme, sıralama, rozet, dosya bırakma |
 | `modules/search/` | arama (Super+Boşluk): uygulamalar, ayarlar, hesap makinesi, dosyalar |
-| `modules/notifications/` | bildirim merkezi: takvim, gruplu bildirimler (adadaki hâli `modules/bar/IslandNotice.qml`) |
+| `modules/notifications/` | bildirim merkezi: takvim ve etkinlikler, gruplu bildirimler (adadaki hâli `modules/bar/IslandNotice.qml`) |
 | `modules/wallpaper/` | duvar kâğıdı katmanı ve seçici (Super+W) |
+| `modules/screenshot/` | ekran görüntüsü ve kaydı: seçim ekranı, köşedeki önizleme (Print) |
+| `modules/switcher/` | pencere değiştirici (Alt+Tab) |
+| `modules/settings/` | Ayarlar penceresi (Super+Virgül): sayfalar ve form parçaları |
+| `settings/` | ayarların kendisi (`Settings.qml`: varsayılanlar, okuma, yazma); tema ve servisler buradan okur |
 | `modules/lock/` | kilit ekranı (`lock.qml` ayrı örnek olarak açar) |
 | `lock.qml` | kilit ekranının giriş noktası |
 | `matugen/` | renk üretim ayarı ve şablonu |
@@ -277,13 +379,16 @@ Bazı parçalar `~/nixos-config/hypr` içindeki ayara dayanıyor:
 
 - `layouts.lua` → `desk.set_layout` ve `desk.cycle_layout` (Düzen menüsü bunları çağırır)
 - `keybinds.lua` → desk'e IPC ile ulaşan kısayollar: Super+Boşluk (`search toggle`), Super+V (`search clipboard`),
-  Super+S (`controlcenter toggle`), Super+W (`wallpaper toggle`), Super+Shift+Esc (`controlcenter open session`),
-  ses/parlaklık tuşları (`osd …`). Print ve Shift+Print `scripts/screenshot.sh`'ı çağırır.
+  Super+S (`controlcenter toggle`), Super+W (`wallpaper toggle`), Super+Virgül (`settings toggle`),
+  Super+Shift+Esc (`controlcenter open session`), ses/parlaklık tuşları (`osd …`), Print (`screenshot start`).
+  Kısayolların `description`'ı Ayarlar → Kısayollar'da görünür ("Grup: ne yapar").
   Bildirim merkezi için kısayol yok (saate tıklanıyor); istersen `… call notifications toggle` bağlanabilir.
 - `autostart.lua` → desk ve hypridle artık burada değil, servis (`nix/home.nix`)
-- `desk.lua` → desk'in çalışırken çağırdığı: `desk.set_power` (pilde hafif görünüm);
+- `desk.lua` → desk'in çalışırken çağırdığı: `desk.set_power` (pilde hafif görünüm), `desk.apply_settings` (Ayarlar);
   `monitors.lua` → `desk.set_refresh`, `appearance.lua` → `desk.apply_animations`. Elle: `hyprctl eval 'desk.set_power(true)'`
-- `hypridle.conf` ve `scripts/idle.sh` → boşta kalınca karartma, kilit, uyku; `loginctl lock-session` gelince kilit
+- `hypridle.conf` ve `scripts/idle.sh` → boşta kalınca karartma, kilit, uyku; `loginctl lock-session` gelince kilit.
+  Ayarlar'da süre değişince desk `~/.local/state/desk/hypridle.conf` yazar, hypridle onunla başlar.
+- `scripts/lid.sh` → kapak (Ayarlar'daki seçim `~/.local/state/desk/lid.env`'de)
 - `appearance.lua` → `blur.brightness` (okunabilirlik) ve katman animasyonlarının hızı (`layersIn`, `layersOut`)
 - `rules.lua` → `desk-popin`: menüler, kontrol merkezi, bildirim merkezi, arama ve duvar kâğıdı seçici hafifçe
   büyüyerek açılır; `no-anim-panels`: bar, dock ve duvar kâğıdı animasyonsuz (dock kendisi kayıyor, duvar kâğıdı

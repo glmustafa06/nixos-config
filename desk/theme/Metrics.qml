@@ -2,6 +2,7 @@ pragma Singleton
 
 import QtQuick
 import Quickshell
+import qs.settings
 
 // Ölçüler: resimlerdeki köşe yarıçapları, boşluklar ve boyutlar.
 // Bir değeri burada değiştirmek bütün shell'e yansır.
@@ -35,7 +36,7 @@ Singleton {
     // sönüm büyüdükçe sekme azalır. Şu an ~0,1 sn'de %90, ~0,18 sn'de tamamen yerinde.
     readonly property real islandSpring: 12
     readonly property real islandDamping: 0.55
-    readonly property int durationDot: 150   // çalışma alanı noktası
+    readonly property int durationDot: Math.round(150 * motion)   // çalışma alanı noktası
 
     // --- Kontrol merkezi ve ses göstergesi (barın altında, sağda)
     readonly property int controlCenterWidth: 392
@@ -56,6 +57,14 @@ Singleton {
     // Bildirim merkezi en çok dock'un üstüne kadar uzar (fazlası kaydırılır)
     readonly property int notificationBottomGap: dockHeight + dockMargin * 2
 
+    // --- Ayarlar penceresi
+    readonly property int settingsWidth: 940
+    readonly property int settingsHeight: 660
+    readonly property int settingsSidebar: 224
+    readonly property int settingsContentMax: 640   // içerik bundan genişse ortalanır
+    readonly property int settingsRowHeight: 46
+    readonly property int settingsRadius: 12        // kartlar
+
     // --- Menüler
     readonly property int menuRadius: 13
     readonly property int menuPadding: 6
@@ -64,9 +73,11 @@ Singleton {
     readonly property int menuOffset: 4    // bar ile menü arasındaki boşluk
 
     // --- Dock
-    readonly property int dockIconSize: 48
+    readonly property int dockIconSize: Math.max(32, Math.min(72, Settings.s.dock.iconSize)) // Ayarlar → Dock
     readonly property int dockPadding: 8      // simgelerle camın kenarı arası
     readonly property int dockSpacing: 6      // simgeler arası
+    readonly property int dockSeparatorWidth: 13
+    readonly property int switcherCell: 96     // pencere değiştiricide bir simgenin kutusu (simge %72'si)
     readonly property int dockRadius: 20
     readonly property int dockMargin: 8       // ekranın alt kenarıyla dock arası
     readonly property int dockHeight: dockIconSize + dockPadding * 2
@@ -75,7 +86,7 @@ Singleton {
     // Dock penceresi: menü yeri + dock + alt boşluk (fazlası saydam ve tıklamaları geçirir)
     readonly property int dockWindowHeight: dockMenuSpace + dockHeight + dockMargin
     readonly property int dockHideDelay: 400  // pencere dock'a girince bu kadar bekleyip gizlenir
-    readonly property int durationDock: 220   // dock'un kayarak gizlenip çıkması
+    readonly property int durationDock: Math.round(220 * motion)   // dock'un kayarak gizlenip çıkması
 
     // --- Arama
     readonly property int searchWidth: 640
@@ -97,8 +108,9 @@ Singleton {
     readonly property int gap: 10          // pencereler arası ve kenarlar
     readonly property int spacing: 8
 
-    // --- Hareket süreleri (ms)
-    readonly property int durationFast: 120
-    readonly property int durationNormal: 200
-    readonly property int durationPage: 160   // kontrol merkezinde sayfa geçişi
+    // --- Hareket süreleri (ms). Ayarlar → Görünüm → "Hareketi azalt" hepsini yarıya indirir.
+    readonly property real motion: Settings.reduceMotion ? 0.5 : 1
+    readonly property int durationFast: Math.round(120 * motion)
+    readonly property int durationNormal: Math.round(200 * motion)
+    readonly property int durationPage: Math.round(160 * motion)   // kontrol merkezinde sayfa geçişi
 }

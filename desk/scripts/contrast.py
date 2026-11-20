@@ -74,9 +74,65 @@ def glass_checks(t):
         ("dock", [glass], [
             ("açık uygulama noktası", t["dockIndicator"], LARGE),
         ]),
+        ("dock'taki bildirim rozeti", [t["badge"]], [
+            ("sayı", t["badgeText"], AA),
+        ]),
+        ("ekran görüntüsü araç çubuğu", [t["tooltip"]], [
+            ("yazı", t["text"], AA),
+            ("gri yazı", t["textMuted"], AA),
+        ]),
+        ("önizlemenin düğmesi (bembeyaz görüntü üstünde)", [t["previewBadge"]], [
+            ("simge", t["text"], LARGE),
+        ]),
+        ("önizlemedeki kayıt süresi (bembeyaz görüntü üstünde)", [t["previewShade"]], [
+            ("yazı", t["text"], AA),
+        ]),
+        ("ada", [t["island"]], [
+            ("kayıt noktası", t["recordDot"], LARGE),
+        ]),
         ("yazı kutusu", tile + [t["field"]], [
             ("yazı", t["text"], AA),
             ("ipucu", t["textFaint"], LARGE),
+        ]),
+        # Ayarlar penceresi: kenar çubuğu cam, sayfa örtücü (arkası önemsiz)
+        ("Ayarlar: kenar çubuğunda seçili bölüm", [glass, t["sidebarSelected"]], [
+            ("yazı", t["text"], AA),
+        ]),
+        ("Ayarlar: kenar çubuğu, üstüne gelince", [glass, t["settingsRowHover"]], [
+            ("yazı", t["text"], AA),
+            ("gri yazı", t["textMuted"], AA),
+        ]),
+        ("Ayarlar: kenar çubuğundaki arama", [glass, t["field"]], [
+            ("yazı", t["text"], AA),
+            ("ipucu", t["textFaint"], LARGE),
+        ]),
+        ("Ayarlar: sayfa", [t["settingsBackground"]], [
+            ("başlık", t["text"], AA),
+            ("açıklama", t["textMuted"], AA),
+            ("bölüm adı, kart altı notu", t["textFaint"], AA),
+        ]),
+        ("Ayarlar: kart", [t["settingsBackground"], t["settingsCard"]], [
+            ("yazı", t["text"], AA),
+            ("açıklama", t["textMuted"], AA),
+            ("tutamak simgesi", t["textFaint"], LARGE),
+        ]),
+        ("Ayarlar: seçenekler", [t["settingsBackground"], t["settingsCard"], t["segment"]], [
+            ("seçili olmayan", t["textMuted"], AA),
+        ]),
+        ("Ayarlar: seçili seçenek", [t["settingsBackground"], t["settingsCard"], t["segment"], t["segmentSelected"]], [
+            ("yazı", t["text"], AA),
+        ]),
+        ("Ayarlar: düğme", [t["settingsBackground"], t["settingsCard"], t["circleOff"]], [
+            ("yazı", t["text"], AA),
+        ]),
+        ("Ayarlar: sıfırla düğmesi", [t["settingsBackground"], t["settingsCard"], t["dangerFill"]], [
+            ("yazı", t["danger"], AA),
+        ]),
+        ("Ayarlar: kısayol tuşu", [t["settingsBackground"], t["settingsCard"], t["keyCap"]], [
+            ("yazı", t["text"], AA),
+        ]),
+        ("Ayarlar: sürüklenen satır", [t["settingsBackground"]], [
+            ("yazı", t["text"], AA),
         ]),
     ]
 
@@ -132,6 +188,25 @@ def bar_report(t, blur):
         span = f"{min(ok):.2f}–{max(ok):.2f}" if ok else "hiçbiri"
         name = "koyu duvar kâğıdı (açık yazı)" if tone == "Dark" else "açık duvar kâğıdı (koyu yazı)"
         print(f"    {name}: arkası {span} gri düzeyindeyken ≥ {AA}")
+
+
+def run_bar_forced(t, blur, verbose=True):
+    """Ayarlarda bar görünümü elle seçilince (koyu ya da açık) zemin barForcedOpacity kadar örtücü:
+    o zaman her duvar kâğıdında okunmalı (en kötü durum: koyu barın arkası beyaz, açığınki siyah)."""
+    failures = []
+    alpha = t["barForcedOpacity"]
+    for tone, name in (("Dark", "koyu bar"), ("Light", "açık bar")):
+        base = t[f"bar{tone}Background"]
+        bg = (base[0], base[1], base[2], max(base[3], alpha))
+        for role, key, need in (("yazı", "Text", AA), ("soluk simge", "TextMuted", 3.0)):
+            fg = t[f"bar{tone}{key}"]
+            worst = min(tl.contrast(fg, tl.over(bg, tl.backdrop((v / 100,) * 3, blur))) for v in range(0, 101, 5))
+            mark = "✓" if worst >= need else "✗"
+            if verbose:
+                print(f"    {mark} {name}, {role}: {worst:.1f}  (en az {need})")
+            if worst < need:
+                failures.append(f"elle seçilmiş {name} → {role}: {worst:.1f} < {need} (barForcedOpacity)")
+    return failures
 
 
 def run_lock(t, verbose=True):
@@ -205,6 +280,27 @@ def minimum_opacity(t, blur):
 HARDCODED = re.compile(r'Qt\.rgba\(\s*[\d.]|Qt\.hsla\(\s*[\d.]|Qt\.(lighter|darker)\(|"#[0-9a-fA-F]{6,8}"')
 
 
+def run_section_icons(verbose=True):
+    """Ayarlar'daki bölüm simgeleri: renkli kare üstünde beyaz çizgi (Colors.settingsSections)."""
+    failures = []
+    text = (tl.ROOT / "theme" / "Colors.qml").read_text()
+    block = re.search(r"settingsSections: \(\{(.*?)\}\)", text, re.S)
+    white = (1.0, 1.0, 1.0)
+    for name, value in re.findall(r"(\w+): \"(#[0-9a-fA-F]{6})\"", block.group(1) if block else ""):
+        fill = tuple(int(value[i:i + 2], 16) / 255 for i in (1, 3, 5))
+        # Üstü %12 aydınlık (SectionIcon'daki degrade): en kötü yer orası
+        top = tuple(min(1.0, c * 1.12) for c in fill)
+        ratio = min(tl.contrast(white, fill), tl.contrast(white, top))
+        ok = ratio >= LARGE
+        if verbose:
+            print(f"    {'✓' if ok else '✗'} {name:<14} {value}  {ratio:4.1f}  (en az {LARGE})")
+        if not ok:
+            failures.append(f"Ayarlar bölüm simgesi {name} ({value}): {ratio:.1f} < {LARGE}")
+    if not block:
+        failures.append("Colors.qml → settingsSections okunamadı")
+    return failures
+
+
 def lint():
     """modules/ ve components/ içinde elle yazılmış renkler."""
     found = []
@@ -235,10 +331,14 @@ def main():
     failures += run_accent(t, blur)
     print("\nBar (duvar kâğıdına göre görünüm seçilir: scripts/bar_tone.py)")
     bar_report(t, blur)
+    print(f"  Görünüm Ayarlar'da elle seçilince (zemin {t['barForcedOpacity']:.2f}, her duvar kâğıdında)")
+    failures += run_bar_forced(t, blur)
     print(f"\nKilit ekranı (bembeyaz duvar kâğıdı, karartma {t['lockDimSafe']:.2f})")
     failures += run_lock(t)
     print("\nUygulamalar (kitty, Dolphin; scripts/apps_theme.py)")
     failures += run_apps(t, blur)
+    print("\nAyarlar'daki bölüm simgeleri (beyaz simge, renkli kare)")
+    failures += run_section_icons()
 
     lowest = minimum_opacity(t, blur)
     print(f"\nBu ayarlarla en düşük güvenli cam saydamlığı: {lowest}")

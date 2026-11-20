@@ -15,10 +15,23 @@ let
   '';
 
   normalUsers = lib.attrNames (lib.filterAttrs (_: u: u.isNormalUser) config.users.users);
+
+  # Pil koruma (Ayarlar → Pil ve güç): şarjı erken durduran dosyalar yalnızca root'a yazılabilir.
+  # Aygıt gelince "users" grubuna (normal kullanıcıların grubu) yazma izni verilir.
+  #   Lenovo (Legion, IdeaPad): conservation_mode   ötekiler: charge_control_end_threshold
+  batteryAccess = pkgs.writeShellScript "desk-battery-access" ''
+    for name in conservation_mode charge_control_end_threshold charge_control_start_threshold; do
+      file="$1/$name"
+      if [ -e "$file" ]; then
+        ${pkgs.coreutils}/bin/chgrp users "$file"
+        ${pkgs.coreutils}/bin/chmod g+w "$file"
+      fi
+    done
+  '';
 in
 {
   options.desk = {
-    enable = lib.mkEnableOption "desk'in sistem tarafı (kilit, giriş ekranı, pil, güç modu, yazı tipleri)";
+    enable = lib.mkEnableOption "desk'in sistem tarafı (kilit, giriş ekranı, pil, güç modu, yazı tipleri, ekran kaydı izni)";
 
     user = lib.mkOption {
       type = lib.types.str;
@@ -42,7 +55,13 @@ in
       security.pam.services.hyprlock = { };
 
       services.upower.enable = true; # pil: bar, kontrol merkezi, uyarılar, pilde hafif görünüm
+      # Ekran kaydı (Print → Kayıt): ekranı ekran kartından okuması için izinli yardımcı (gsr-kms-server)
+      programs.gpu-screen-recorder.enable = true;
       services.power-profiles-daemon.enable = true; # güç modu: Dengeli / Performans / Tasarruf
+      services.udev.extraRules = ''
+        ACTION=="add|bind", SUBSYSTEM=="platform", DRIVER=="ideapad_acpi", RUN+="${batteryAccess} /sys%p"
+        ACTION=="add", SUBSYSTEM=="power_supply", KERNEL=="BAT*", RUN+="${batteryAccess} /sys%p"
+      '';
 
       fonts.packages = with pkgs; [
         inter # desk'in yazı tipi (giriş ekranı da)

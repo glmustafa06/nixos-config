@@ -7,7 +7,8 @@ import qs.components
 import qs.services
 
 // Bildirim merkezi: saate tıklayınca barın altında, sağda açılır (maketteki gibi).
-// Üstte ay takvimi, altında uygulamaya göre gruplu bildirimler (en yenisi başta).
+// Üstte ay takvimi ve seçili günün etkinlikleri, altında uygulamaya göre gruplu bildirimler
+// (en yenisi başta).
 //   - Grubun yalnızca en yeni bildirimi görünür ("+N bildirim daha"); tıklayınca grup açılır.
 //   - Tek bildirime tıklayınca uygulamaya gidilir ve merkez kapanır; × yalnızca onu siler.
 //   - Kapalı gruptaki × bütün grubu siler.
@@ -36,14 +37,24 @@ PanelWindow {
     function close() {
         controller?.closeMenus();
     }
+    // Takvim hatırlatmasına tıklanınca merkez kapanmaz, takvim o güne geçer (Ui.calendarRequested)
     function activate(entry) {
+        const stay = entry.tag === "calendar" && entry.run;
         Notifications.activate(entry);
-        close();
+        if (!stay)
+            close();
     }
+    function showDay(day) {
+        calendar.select(Events.parseDay(day));
+    }
+    // Esc: önce açık etkinlik düzenleyicisi kapanır, sonra merkez
     function handleKey(event) {
         if (event.key !== Qt.Key_Escape)
             return false;
-        close();
+        if (calendar.editing)
+            calendar.closeEditor();
+        else
+            close();
         return true;
     }
 
@@ -53,6 +64,7 @@ PanelWindow {
         if (open) {
             calendar.reset();
             list.contentY = 0;
+            Qt.callLater(() => keySink.forceActiveFocus());
         } else {
             expandedGroups = {};
         }
@@ -98,9 +110,24 @@ PanelWindow {
         GlassEdge {}
 
         FocusScope {
+            id: keyScope
+
             anchors.fill: parent
             focus: true
             Keys.onPressed: event => event.accepted = root.handleKey(event)
+
+            // Klavye odağı burada durur: tuşlar yukarıdaki Keys'e çıkar. Etkinlik düzenleyicisi kapanınca
+            // odak (gizlenen yazı kutusundan) buraya döner, Esc yine merkezi kapatır.
+            Item {
+                id: keySink
+            }
+            Connections {
+                target: calendar
+                function onEditingChanged() {
+                    if (!calendar.editing)
+                        keySink.forceActiveFocus();
+                }
+            }
 
             ColumnLayout {
                 id: column

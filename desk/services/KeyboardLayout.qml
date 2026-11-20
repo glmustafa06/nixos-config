@@ -20,7 +20,9 @@ Singleton {
     // Hyprland düzen adını uzun yazar ("Turkish"); bilinenleri kısalt
     readonly property var names: ({
             "Turkish": "TR",
+            "Turkish (F)": "F",
             "English (US)": "US",
+            "English (US, intl., with dead keys)": "US",
             "English (UK)": "UK",
             "German": "DE"
         })

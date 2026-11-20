@@ -44,6 +44,12 @@ MenuPopup {
             action: () => Ui.controlCenterRequested("main")
         },
         {
+            text: "Ayarlar…",
+            icon: "settings",
+            shortcut: "Super ,",
+            action: () => Ui.openSettings("")
+        },
+        {
             separator: true
         },
         {

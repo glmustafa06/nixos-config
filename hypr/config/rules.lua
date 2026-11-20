@@ -18,6 +18,22 @@ for _, class in ipairs(FLOATING) do
     })
 end
 
+-- desk'in Ayarlar penceresi: ortada yüzer, boyutunu kendisi seçer (shell.qml → AppId desk-settings)
+hl.window_rule({
+    name = "float-desk-settings",
+    match = { class = "^desk-settings$" },
+    float = true,
+    center = true,
+})
+
+-- Ekran görüntüsü düzenleyicisi (Satty): ortada yüzer; boyutunu resme göre kendisi seçer
+hl.window_rule({
+    name = "float-satty",
+    match = { class = "^com\\.gabm\\.satty$" },
+    float = true,
+    center = true,
+})
+
 -- Dosya seçme penceresi
 hl.window_rule({
     name = "float-portal",
@@ -52,9 +68,11 @@ hl.layer_rule({
 
 -- Bar, dock ve duvar kâğıdı animasyonsuz: dock kendisi kayarak gizlenip çıkıyor, duvar kâğıdı
 -- kendi geçişini yapıyor, bar da shell her yeniden yüklendiğinde titremesin.
+-- Ekran görüntüsünün seçim ekranı bir anda gelsin (donmuş ekran), önizleme kendisi kayarak gelir;
+-- pencere değiştirici de bir anda (Alt+Tab hızlı olmalı).
 hl.layer_rule({
     name = "no-anim-panels",
-    match = { namespace = "^(desk-bar|desk-dock.*|desk-wallpaper)$" },
+    match = { namespace = "^(desk-bar|desk-dock.*|desk-wallpaper|desk-screenshot|desk-shot-preview|desk-switcher)$" },
     no_anim = true,
 })
 

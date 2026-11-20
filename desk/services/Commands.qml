@@ -32,6 +32,24 @@ Singleton {
         Quickshell.execDetached(uwsm ? ["uwsm", "app", "--"].concat(command) : command);
     }
 
+    // Uygulamayı dosyalarla aç (dock'a bırakılan dosyalar). uwsm Exec'teki %f/%F/%u/%U'yu kendisi
+    // doldurur; yalnızca tek dosya alan uygulamayı (%f, %u) her dosya için ayrı açar.
+    // uwsm yoksa: Quickshell'in ayrıştırdığı komutun sonuna eklenir (alan kodları komutta yok).
+    function launchWith(entry, paths) {
+        if (!entry || paths.length === 0)
+            return;
+        if (uwsm) {
+            Quickshell.execDetached(["uwsm", "app", "--", entry.id + ".desktop"].concat(paths));
+            return;
+        }
+        const exec = entry.execString ?? "";
+        const single = /%[fu]/.test(exec) && !/%[FU]/.test(exec);
+        const prefix = entry.runInTerminal ? ["xdg-terminal-exec"] : [];
+        const base = prefix.concat(Array.from(entry.command ?? []));
+        for (const group of single ? paths.map(p => [p]) : [paths])
+            Quickshell.execDetached(base.concat(group));
+    }
+
     function run(command, callback) {
         const process = runner.createObject(root, {
             command: command

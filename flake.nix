@@ -1,5 +1,5 @@
 {
-  description = "legion5 — NixOS + Hyprland + Yörünge";
+  description = "legion5 — NixOS + Hyprland + Desk";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";

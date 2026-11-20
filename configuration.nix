@@ -10,8 +10,7 @@
   boot.loader.systemd-boot.configurationLimit = 5; # menüde en fazla 5 sürüm
   boot.loader.efi.canTouchEfiVariables = true;
 
-  # Varsayılan çekirdek. linuxPackages_latest ile Nvidia modülü zaman zaman
-  # derlenemiyor; bu hafta sorun istemiyoruz.
+  # Linux kernel latest'ta. Bir sorun çıkarsa linuxPackages yapılıp stable'a geçilebilir
   boot.kernelPackages = pkgs.linuxPackages_latest;
 
   # btrfs: zstd sıkıştırma + erişim zamanı yazmama.
@@ -22,10 +21,10 @@
     "/nix".options = [ "compress=zstd" "noatime" ];
   };
 
-  # sda3: 384 GB'lık veri bölümü (btrfs) → ~/Veri
+  # sda3: 384 GB'lık veri bölümü (btrfs) → ~/HDD
   # Büyük dosyalar burada durur, 40 GB'lık kök bölüm rahatlar.
   # Disk bulunamazsa açılış beklemez (nofail).
-  fileSystems."/home/mustafa/Veri" = {
+  fileSystems."/home/mustafa/HDD" = {
     device = "/dev/disk/by-uuid/89645538-1bb7-43e8-9f8e-257e0e3beedd";
     fsType = "btrfs";
     options = [ "noatime" "compress=zstd" "nofail" "x-systemd.device-timeout=5s" ];

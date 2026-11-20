@@ -4,12 +4,14 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 import Quickshell.Hyprland
+import qs.settings
 
 // Dock'taki uygulamalar: sabitlenenler (dosyada saklanır) ve penceresi açık olanlar.
 //
 // Her uygulama bir "anahtar"la tanınır: .desktop kaydının kimliği ("org.kde.dolphin" gibi).
 // Kaydı bulunamayan pencerelerin anahtarı "app:<pencere sınıfı>".
-// Sabitlenenler ~/.local/state/desk/dock.json dosyasında; dock'tan sağ tıkla değişir.
+// Sabitlenenler Ayarlar dosyasında (Settings → dock.pinned); dock'tan sağ tıkla ya da sürükleyerek
+// değişir. Ayarlar'a hiç yazılmamışsa eski ~/.local/state/desk/dock.json okunur (ilk değişiklikte taşınır).
 Singleton {
     id: root
 
@@ -19,7 +21,7 @@ Singleton {
     readonly property var pinnedKeys: {
         DesktopEntries.applications.values; // uygulama listesi dolunca yeniden hesaplansın
         const list = [];
-        for (const name of store.pinned) {
+        for (const name of pinnedNames) {
             const entry = lookup(name);
             if (entry && !list.includes(entry.id))
                 list.push(entry.id);
@@ -122,26 +124,66 @@ Singleton {
         windowsOf(key).forEach(w => WindowManager.close(w));
     }
 
-    function setPinned(key, on) {
-        const list = store.pinned.filter(name => (lookup(name)?.id ?? name) !== key);
-        if (on)
-            list.push(key);
-        store.pinned = list;
+    // Kayıttaki adlar: Ayarlar'daki liste, yoksa eski dosyadaki
+    readonly property var pinnedNames: Settings.s.dock.pinned ?? store.pinned
+
+    function savePinned(list) {
+        Settings.set("dock.pinned", list);
     }
 
+    function setPinned(key, on) {
+        const list = pinnedNames.filter(name => (lookup(name)?.id ?? name) !== key);
+        if (on)
+            list.push(key);
+        savePinned(list);
+    }
+
+    // Sürükleyerek sıralama: sabitlenenlerin yeni sırası (kayıt kimlikleri). Listede olmayan açık bir
+    // uygulama varsa o da sabitlenir. Kurulu olmayan (bulunamayan) adlar silinmez, sonda kalır:
+    // uygulama yeniden kurulunca dock'a geri gelir.
+    function setPinnedOrder(keys) {
+        const missing = pinnedNames.filter(name => !lookup(name));
+        savePinned(keys.filter(key => !key.startsWith("app:")).concat(missing));
+    }
+
+    // Bildirimi gönderen uygulamanın dock anahtarı ("" bulunamazsa): önce bildirimin söylediği
+    // .desktop kaydı, sonra uygulama adı (kimlik, pencere sınıfı ya da kayıttaki ad)
+    function keyForApp(desktopEntry, appName) {
+        const byEntry = desktopEntry ? lookup(desktopEntry) : null;
+        if (byEntry)
+            return byEntry.id;
+        if (!appName)
+            return "";
+        const byName = lookup(appName);
+        if (byName)
+            return byName.id;
+        const folded = appName.toLowerCase();
+        return DesktopEntries.applications.values.find(e => e.name.toLowerCase() === folded)?.id ?? "";
+    }
+
+    // --- Dosya bırakma
+    // Uygulama dosya açabiliyor mu: .desktop'taki Exec'te %f, %F, %u ya da %U olmalı
+    function canOpenFiles(key) {
+        const entry = entryOf(key);
+        return entry !== null && /%[fFuU]/.test(entry.execString ?? "");
+    }
+
+    // Dosyaları (yol ya da adres) uygulamayla aç
+    function openWith(key, paths) {
+        const entry = entryOf(key);
+        if (entry && paths.length > 0)
+            Commands.launchWith(entry, paths);
+    }
+
+    // Eski dosya (yalnızca okunur): Ayarlar'a geçmeden önceki sabitlenenler
     FileView {
         path: Quickshell.env("HOME") + "/.local/state/desk/dock.json"
         printErrors: false
-        onAdapterUpdated: writeAdapter()
-        onLoadFailed: error => {
-            if (error === FileViewError.FileNotFound)
-                writeAdapter();
-        }
 
         JsonAdapter {
             id: store
 
-            // İlk açılışta sabitlenenler
+            // İlk açılışta sabitlenenler (dosya da yoksa)
             property var pinned: ["zen", "org.kde.dolphin", "kitty", "code", "obsidian", "spotify"]
         }
     }
