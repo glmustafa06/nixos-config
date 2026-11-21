@@ -1,2 +1,5 @@
 # Quickshell'in editör için ürettiği dosya
 .qmlls.ini
+
+# Python'un önbelleği (betikler çalışınca yeniden yazılır)
+__pycache__/
