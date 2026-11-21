@@ -6,6 +6,7 @@
 #   suspend <battery|ac> : o güç kaynağındaysan uyut
 #   late                 : 15 dk — pildeysen uyut, prizdeysen kilitle ve ekranı kapat (eski dosya)
 #   undim, wake          : kullanıcı döndü: parlaklığı geri al, ekranı aç
+#   resume               : uykudan dönüldü (after_sleep_cmd): ekranı aç, kilide klavye odağı
 # Türkçe yerel ayarı betiği bozmasın (plan: Sorun 19)
 export LC_ALL=C
 
@@ -25,6 +26,25 @@ source_is() {
 
 screen() {
     hyprctl dispatch "hl.dsp.dpms({ action = \"$1\" })" >/dev/null
+}
+
+# Kilitliyken klavye odağını kilit ekranına geri ver. Hyprland odağı, imleç kıpırdayınca imlecin
+# altındaki kilit yüzeyine verir; uykudan dönerken ve ekran açılırken yüzeyler yeniden kurulurken
+# bu kaçabiliyor (yazılanlar gitmiyor, bir iki tık gerekiyordu). İmleci olduğu yere "taşımak"
+# odağı yeniden hesaplatır; yüzeyler geç gelebileceği için birkaç kez. Arka planda çalışır.
+refocus() {
+    (
+        for delay in 0.3 0.7 1.5; do
+            sleep "$delay"
+            [ "$(hyprctl locked 2>/dev/null)" = true ] || exit 0
+            pos="$(hyprctl cursorpos 2>/dev/null | tr -d ' ')"
+            x="${pos%%,*}"
+            y="${pos##*,}"
+            case "$x" in '' | *[!0-9-]*) continue ;; esac
+            case "$y" in '' | *[!0-9-]*) continue ;; esac
+            hyprctl dispatch "hl.dsp.cursor.move({ x = $x, y = $y })" >/dev/null 2>&1
+        done
+    ) </dev/null >/dev/null 2>&1 &
 }
 
 case "${1:-}" in
@@ -65,9 +85,14 @@ case "${1:-}" in
     wake)
         screen on
         "$0" undim
+        refocus
+        ;;
+    resume)
+        screen on
+        refocus
         ;;
     *)
-        echo "Usage: $0 dim|lock|suspend <battery|ac> | late | undim | wake" >&2
+        echo "Usage: $0 dim|lock|suspend <battery|ac> | late | undim | wake | resume" >&2
         exit 1
         ;;
 esac

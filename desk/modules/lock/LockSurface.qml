@@ -11,7 +11,14 @@ WlSessionLockSurface {
     color: Colors.lockFallback
 
     LockContent {
+        id: content
         anchors.fill: parent
         lock: root.lock
+    }
+
+    // Yüzey yeniden görünür olunca (ekran yeniden bağlandı, uykudan dönüldü) yazı şifre kutusuna
+    onVisibleChanged: {
+        if (visible)
+            Qt.callLater(content.focusInput);
     }
 }

@@ -45,6 +45,36 @@ in
       default = true;
       description = "Giriş ekranı (SDDM) desk'in teması olsun: kilit ekranıyla aynı görünüm.";
     };
+
+    loginCompositor = lib.mkOption {
+      type = lib.types.enum [ "kwin" "weston" ];
+      default = "kwin";
+      description = ''
+        Giriş ekranını çizen program. NixOS'un varsayılanı Weston; bu bilgisayarda (AMD + Nvidia) fare çalıştığı
+        hâlde imleci çizmiyor (plan: Sorun 94). KWin (KDE'nin giriş ekranında kullandığı) çiziyor; birkaç yüz MB
+        daha yer tutar. Klavye düzeni (tr) ikisinde de services.xserver.xkb'den gelir.
+      '';
+    };
+
+    # İmleç teması: giriş ekranında ve sistemde varsayılan (oturumdaki home.nix → home.pointerCursor ile aynı olmalı)
+    cursor = {
+      name = lib.mkOption {
+        type = lib.types.str;
+        default = "Bibata-Modern-Classic";
+        description = "İmleç temasının adı.";
+      };
+      package = lib.mkOption {
+        type = lib.types.package;
+        default = pkgs.bibata-cursors;
+        defaultText = lib.literalExpression "pkgs.bibata-cursors";
+        description = "İmleç temasının paketi.";
+      };
+      size = lib.mkOption {
+        type = lib.types.int;
+        default = 24;
+        description = "İmlecin boyu.";
+      };
+    };
   };
 
   config = lib.mkIf cfg.enable (lib.mkMerge [
@@ -78,8 +108,18 @@ in
       # desk'in giriş ekranıyla paylaştıkları: kullanıcı yazar, SDDM (kendi kullanıcısıyla) okur
       systemd.tmpfiles.rules = [ "d /var/lib/desk 0755 ${cfg.user} users -" ];
 
-      environment.systemPackages = [ sddmTheme ];
+      environment.systemPackages = [ sddmTheme cfg.cursor.package ];
       services.displayManager.sddm.theme = "desk";
+      # İmleç: NixOS imleç temasını yalnızca Breeze temasında kendisi verir; vermezse SDDM'in Wayland
+      # ekranında imleç görünmez (bulunamayan "default" tema). Ayrıca sistemde temasını bilmeyen
+      # programlar için de varsayılan ("default" bu temayı miras alır).
+      services.displayManager.sddm.settings.Theme = {
+        CursorTheme = lib.mkDefault cfg.cursor.name;
+        CursorSize = lib.mkDefault cfg.cursor.size;
+      };
+      xdg.icons.fallbackCursorThemes = lib.mkDefault [ cfg.cursor.name ];
+      # Giriş ekranını çizen program (Wayland açıksa; configuration.nix → sddm.wayland.enable)
+      services.displayManager.sddm.wayland.compositor = lib.mkDefault cfg.loginCompositor;
       # İlk açılışta (SDDM henüz hatırlamıyorken) desk'in çalıştığı oturum seçili gelsin
       services.displayManager.defaultSession = lib.mkDefault "hyprland-uwsm";
     })

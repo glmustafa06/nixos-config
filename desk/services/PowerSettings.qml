@@ -46,7 +46,7 @@ listener {
 general {
     lock_cmd = qs -n -p ~/.config/quickshell/desk/lock.qml
     before_sleep_cmd = loginctl lock-session
-    after_sleep_cmd = hyprctl dispatch 'hl.dsp.dpms({ action = "on" })'
+    after_sleep_cmd = ${idleScript} resume
     inhibit_sleep = 3
 }
 `;

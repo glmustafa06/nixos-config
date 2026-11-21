@@ -1,0 +1,9 @@
+{
+  "bar": {
+    "order": ["tray", "keyboard", "sound", "bluetooth", "wifi", "battery", "search", "controlcenter", "clock"],
+    "batteryPercent": false
+  },
+  "input": {
+    "layouts": ["tr", "us"]
+  }
+}

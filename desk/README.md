@@ -195,6 +195,9 @@ desk düzenlenirken ya da çökerken etkilenmez, kilitliyken dosya değişikliğ
 - Kişi resmi: `~/.face` (varsa).
 - Boşta (hypridle + `hypr/scripts/idle.sh`): pilde 3 dk karartır, 5 dk kilitler ve ekranı kapatır, 15 dk uyutur;
   prizde 10 dk karartır, 15 dk kilitler ve ekranı kapatır. Video oynarken hiçbiri olmaz.
+- Yazılanlar hep şifre kutusuna gider: pencere etkinleşince ya da kutu odağı kaybedince odak geri verilir.
+  Uykudan ve ekran kapanmasından dönünce `idle.sh resume`/`wake` imleci yerinde kıpırdatır; Hyprland klavyeyi
+  kilit ekranına yeniden bağlar (tıklamak gerekmez).
 - Kilit çökerse Hyprland düz renkli bir ekran gösterir; kurtarma: plan → Sorun 26.
 
 ## Giriş ekranı (SDDM)
@@ -207,6 +210,10 @@ başlat/kapat, sol altta oturum seçici (varsayılan Hyprland (UWSM)), sağ üst
 - SDDM ev klasörünü okuyamaz: duvar kâğıdının bulanık, karartılmış hâli ve kişi resmi (`~/.face`)
   `/var/lib/desk`'e konur (`scripts/login_screen.py`; duvar kâğıdı değişince colors.sh, ayrıca her updatenix).
 - Çıkış yapmadan denemek: `sddm-greeter-qt6 --test-mode --theme /run/current-system/sw/share/sddm/themes/desk`
+
+İmleç teması `desk.cursor` (varsayılan Bibata-Modern-Classic, `nix/nixos.nix`); NixOS onu yalnızca Breeze temasında
+kendisi verir. Giriş ekranını KWin çizer (`desk.loginCompositor`): NixOS'un varsayılanı Weston bu bilgisayarda
+imleci göstermiyordu (fare çalışıyor, imleç yok). Klavye düzeni `services.xserver.xkb`'den gelir.
 
 ## Duvar kâğıdı
 

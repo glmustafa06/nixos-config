@@ -19,6 +19,25 @@ Item {
 
     required property var lock   // LockScreen.qml
 
+    // ---------- Klavye odağı ----------
+    // Yazılanlar hep şifre kutusuna gitsin. Uykudan dönünce ya da ekran kapanıp açılınca pencere
+    // odağı bir an kaybedip geri alabiliyor; kutu o arada odağını yitirirse tıklamadan yazılamıyordu.
+    // Pencere etkinleşince, görününce ve kutu odağı kaybedince odak geri verilir.
+    // (Hyprland tarafı: hypr/scripts/idle.sh → resume, wake: imleci kıpırdatıp odağı yeniletir.)
+    function focusInput() {
+        if (!input.activeFocus)
+            input.forceActiveFocus();
+    }
+    readonly property bool windowActive: Window.active
+    onWindowActiveChanged: {
+        if (windowActive)
+            Qt.callLater(focusInput);
+    }
+    onVisibleChanged: {
+        if (visible)
+            Qt.callLater(focusInput);
+    }
+
     SystemClock {
         id: clock
         precision: SystemClock.Minutes
@@ -390,8 +409,13 @@ Item {
                     echoMode: TextInput.Password
                     font.pixelSize: 15
                     focus: true
-                    enabled: !root.lock.busy
+                    // Doğrulanırken yazı değişmez ama odak kutuda kalır (enabled: false odağı düşürürdü)
+                    readOnly: root.lock.busy
                     text: root.lock.password
+                    onActiveFocusChanged: {
+                        if (!activeFocus && root.windowActive)
+                            Qt.callLater(root.focusInput);
+                    }
                     onTextEdited: {
                         root.lock.password = text;
                         if (root.lock.failure === "wrong")
@@ -402,6 +426,10 @@ Item {
                         if (event.key === Qt.Key_CapsLock) {
                             capsTimer.restart();
                         } else if (event.key === Qt.Key_Escape) {
+                            if (root.lock.busy) {
+                                event.accepted = true;
+                                return;
+                            }
                             if (root.lock.password === "")
                                 root.lock.cancel();
                             root.lock.password = "";
@@ -576,7 +604,10 @@ Item {
         interval: 80
         onTriggered: KeyboardLayout.refresh()
     }
-    Component.onCompleted: KeyboardLayout.refresh()
+    Component.onCompleted: {
+        KeyboardLayout.refresh();
+        Qt.callLater(focusInput);
+    }
 
     // Duvar kâğıdının üstündeki yazılara hafif gölge
     component TextShadow: MultiEffect {
