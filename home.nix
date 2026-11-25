@@ -57,7 +57,6 @@ in
     vlc
 
     # --- Geliştirme
-    neovim
     nodejs
     vim 
     vscode
@@ -82,6 +81,29 @@ in
     gh # GitHub komut satırı
     # gcc, rustc gibi derleyiciler sisteme değil, projeye özel `nix develop` ortamlarına
   ];
+
+  # ---------------------------------------------------------------
+  # Neovim
+  # ---------------------------------------------------------------
+  # Ayarlar ~/.config/nvim'de, Nix'in dışında; eklentileri lazy.nvim kendisi kurar. Burada yalnızca
+  # nvim programı var. Home Manager onu küçük bir sarmalayıcıyla (wrapper) kurar: nvim açılırken
+  # extraPackages'teki programlar nvim'in PATH'ine eklenir. Terminalde bunlar yine yok.
+  programs.neovim = {
+    enable = true;
+    # nvim-treesitter dillerin ayrıştırıcılarını (parser) bilgisayarda derler: tree-sitter komutu
+    # ve bir C derleyicisi ister. Derleyici yalnızca nvim'e verildi; projelerinkiler nix develop'ta.
+    # Derlenen ayrıştırıcılar: ~/.local/share/nvim/site/parser/*.so
+    extraPackages = with pkgs; [
+      tree-sitter
+      gcc
+    ];
+    # Python ve Ruby ile yazılmış eski tip eklentiler için destek. Kullanan yok, kapalı.
+    withPython3 = false;
+    withRuby = false;
+    # Home Manager kendi birkaç satırını normalde ~/.config/nvim/init.lua'ya yazar; orada senin
+    # init.lua'n var, çakışırdı. Bu ayar o satırları dosyaya değil, nvim açılırken yükler.
+    sideloadInitLua = true;
+  };
 
   # ---------------------------------------------------------------
   # Hyprland
