@@ -1,24 +1,6 @@
 # ═══════════════════════════════════════════════════════════════════════════
 # home.nix — kullanıcı tarafı (Home Manager)
 # ═══════════════════════════════════════════════════════════════════════════
-#
-# Bu dosya ne?
-#   Senin kullanıcına ait olanlar: kurulu programlar, ~/.config'teki dosyalar, kullanıcı servisleri
-#   (oturumla başlayan programlar), fish ayarları. Sistem tarafı configuration.nix'te.
-#
-# Nasıl çalışır?
-#   Home Manager bu dosyadan bir "ev" sürümü üretir ve onu evine yerleştirir:
-#     - home.packages               → /etc/profiles/per-user/mustafa/bin (PATH'te)
-#     - xdg.configFile."x"          → ~/.config/x (Nix deposundaki dosyaya bağlantı, salt okunur)
-#     - systemd.user.services, services.* → ~/.config/systemd/user (kullanıcı servisleri)
-#     - home.sessionVariables vb.   → oturum açılırken okunan ortam değişkenleri
-#   Yönettiği bir dosyayı elle değiştiremezsin (salt okunur); değiştirmek için buradan.
-#
-# Ne zaman devreye girer?
-#   updatenix'te ve her açılışta home-manager-mustafa servisi çalışıp dosyaları yerleştirir
-#   (flake.nix'te Home Manager NixOS'un içine yerleştirildiği için ayrı bir komut yok).
-#   Kullanıcı servisleri oturum açılınca başlar; ortam değişkenleri oturumu kapatıp açınca değişir.
-#   Hata olursa: journalctl -u home-manager-mustafa
 
 { config, pkgs, inputs, ... }:
 # config: Home Manager'ın birleşmiş ayar ağacı; pkgs: sistemle aynı nixpkgs;
@@ -51,18 +33,12 @@ in
   # ---------------------------------------------------------------
   # Programlar
   # ---------------------------------------------------------------
-  # Silmek için satırı sil + updatenix. Dosyaları /nix/store'da bir süre daha durur, nix.gc temizler.
   # desk'in kullandığı programlar burada yok, desk/nix/home.nix kuruyor (yukarıdaki imports).
   home.packages = with pkgs; [
     # --- Görünüm
     qt6Packages.qt6ct # Qt programlarının görünüm ayarları penceresi (configuration.nix → QT_QPA_PLATFORMTHEME)
     kdePackages.breeze # KDE'nin Qt stili: Kvantum yüklenemezse KDE programları bunu kullanır
     kdePackages.breeze-icons # KDE programlarının yedek simgeleri (Colloid'de bulunmayanlar)
-    # Aşağıdaki üçü Noctalia döneminden; desk bunları kullanmıyor. Ama GTK ya da Qt ayarlarında
-    # seçiliyse programlar hâlâ kullanıyor olabilir. Kontrol:
-    #   gsettings get org.gnome.desktop.interface gtk-theme; gsettings get org.gnome.desktop.interface icon-theme
-    #   grep -i theme ~/.config/gtk-3.0/settings.ini ~/.config/qt6ct/qt6ct.conf
-    # Çıktılarda "Papirus" ya da "adw-gtk3" geçmiyorsa üçü de silinebilir.
     papirus-icon-theme # simge teması (desk ve Dolphin Colloid kullanıyor)
     adw-gtk3 # GTK3 programlarına GNOME'un yeni (libadwaita) görünümü
     nwg-look # GTK temasını, simgeleri, imleci seçen pencere (~/.config/gtk-3.0 ve gsettings'e yazar)
@@ -74,22 +50,17 @@ in
     kdePackages.dolphin # dosya yöneticisi
     kdePackages.kio-extras # Dolphin'in ek yetenekleri: önizlemeler, arşivlerin içi, ağ (sftp, smb)
     # (Dolphin'in PDF, video, resim önizleme eklentileri desk'ten geliyor.)
-    vscode
     obsidian
     spotify
     onlyoffice-desktopeditors
     pavucontrol # ses aygıtlarını ve programların sesini ayrıntılı ayarlama penceresi
     vlc
 
-    # --- Neovim
+    # --- Geliştirme
     neovim
-    # Mason (Neovim'in dil sunucusu kurucusu, ~/.local/share/nvim/mason) kurduklarını Nix'ten değil
-    # internetten indirir ve kurarken sistemdeki araçları kullanır:
-    #   - bash-language-server (bashls), pyright gibi çoğu npm paketi: npm ve node bu pakette.
-    #     Yokken Mason "failed to install bashls" diyordu.
-    #   - hazır derlenmiş olanlar (lua-language-server gibi) configuration.nix'teki nix-ld sayesinde çalışır.
     nodejs
-    vim # neovim'in yanında; alışkanlıksa kalsın, değilse silinebilir
+    vim 
+    vscode
 
     # --- Terminal araçları
     btop # sistem izleyici (işlemci, bellek, süreçler)
